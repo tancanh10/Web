@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EnterpriseOS - Quản Lý Kho Xưởng & Điều Hành Dự Án</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tùy chỉnh bảng màu tối dùng chung cho giao diện. -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              950: '#020617',
+              900: '#0F172A',
+              800: '#1E293B',
+            },
+            indigo: {
+              600: '#4F46E5',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Alpine.js for Reactive State Management -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex overflow-hidden" x-data="enterpriseApp()">
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside :class="sidebarOpen ? 'w-64' : 'w-20'" class="bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col z-20 shrink-0">
+    <div class="flex items-center justify-between p-4 border-b border-slate-800">
+      <template x-if="sidebarOpen">
+        <span class="font-bold text-lg bg-gradient-to-r from-indigo-400 to-emerald-400 bg-clip-text text-transparent">EnterpriseOS</span>
+      </template>
+      <button @click="sidebarOpen = !sidebarOpen" class="p-2 hover:bg-slate-800 rounded-lg text-slate-400">
+        <i data-lucide="menu" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <!-- Các nút điều hướng được tạo từ danh sách tab của Alpine. -->
+    <nav class="flex-1 p-4 space-y-2">
+      <template x-for="tab in tabs" :key="tab.id">
+        <button 
+          @click="activeTab = tab.id; $nextTick(() => lucide.createIcons())"
+          :class="activeTab === tab.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'"
+          class="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all"
+        >
+          <i :data-lucide="tab.icon" class="w-5 h-5 shrink-0"></i>
+          <span x-show="sidebarOpen" x-text="tab.label"></span>
+        </button>
+      </template>
+    </nav>
+
+    <!-- Thông tin tài khoản hiển thị ở chân thanh điều hướng. -->
+    <div class="p-4 border-t border-slate-800 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-400 font-bold flex items-center justify-center shrink-0 border border-indigo-500/30">
+        AD
+      </div>
+      <div x-show="sidebarOpen" class="overflow-hidden">
+        <p class="text-sm font-medium text-white truncate">System Admin</p>
+        <p class="text-xs text-slate-400 truncate">admin@enterprise.vn</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <!-- TOP HEADER -->
+    <header class="h-16 bg-slate-900/80 backdrop-blur border-b border-slate-800 px-6 flex items-center justify-between z-10 shrink-0">
+      <!-- Thanh tìm kiếm và nhóm thao tác nhanh/thông báo. -->
+      <div class="flex items-center gap-4 flex-1 max-w-md">
+        <div class="relative w-full">
+          <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm vật tư, mã lỗi, dự án..." 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          >
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <button @click="triggerQuickModal = true" class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg shadow-indigo-600/20 transition-all">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i> Tạo Phiếu Nhanh
+        </button>
+        <div class="relative">
+          <button class="p-2 bg-slate-800/60 hover:bg-slate-800 rounded-xl text-slate-300 relative">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+            <span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-slate-900"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT VIEWS -->
+    <main class="flex-1 overflow-y-auto bg-slate-950 p-6">
+
+      <!-- PHÂN HỆ 1: DASHBOARD BENTO GRID -->
+      <div x-show="activeTab === 'overview'" class="space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Tổng Quan Kho Xưởng & Điều Hành</h1>
+            <p class="text-sm text-slate-400">Hệ thống quản lý thông minh chuẩn Enterprise - Realtime Monitoring</p>
+          </div>
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-pulse"></span> Hệ thống ổn định
+          </span>
+        </div>
+
+        <!-- 4 KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-start"><span class="text-xs font-semibold uppercase text-slate-400">Tổng Giá Trị Kho</span><div class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl"><i data-lucide="layers" class="w-5 h-5"></i></div></div>
+            <div class="mt-4"><span class="text-2xl font-bold text-white">2.45B VNĐ</span></div>
+            <p class="text-xs text-slate-500 mt-1">Cập nhật thời gian thực</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-start"><span class="text-xs font-semibold uppercase text-slate-400">Tổng Số Loại Vật Tư</span><div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl"><i data-lucide="package" class="w-5 h-5"></i></div></div>
+            <div class="mt-4"><span class="text-2xl font-bold text-white" x-text="materials.length + ' SKU'"></span></div>
+            <p class="text-xs text-slate-500 mt-1">45 danh mục khác nhau</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex justify-between items-start"><span class="text-xs font-semibold uppercase text-slate-400">Dự Án Đang Chạy</span><div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl"><i data-lucide="cpu" class="w-5 h-5"></i></div></div>
+            <div class="mt-4"><span class="text-2xl font-bold text-white">8 Dự án</span></div>
+            <p class="text-xs text-slate-500 mt-1">Thi công cơ điện & kết cấu</p>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl border-amber-500/30">
+            <div class="flex justify-between items-start"><span class="text-xs font-semibold uppercase text-slate-400">Cảnh Báo Tồn Kho</span><div class="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl"><i data-lucide="alert-triangle" class="w-5 h-5"></i></div></div>
+            <div class="mt-4"><span class="text-2xl font-bold text-amber-400" x-text="materials.filter(m => m.status === 'LOW_STOCK').length + ' Vật tư'"></span></div>
+            <p class="text-xs text-slate-500 mt-1">Dưới định mức tối thiểu</p>
+          </div>
+        </div>
+
+        <!-- Live Activity Audit Logs -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h3 class="text-lg font-semibold text-white mb-4">Nhật Ký Hoạt Động (Live Activity Audit Logs)</h3>
+          <div class="space-y-3">
+            <template x-for="log in auditLogs">
+              <div class="flex items-start justify-between pb-3 border-b border-slate-800/60 last:border-0">
+                <div class="flex items-start gap-3">
+                  <span class="text-xs font-mono text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded" x-text="log.time"></span>
+                  <div>
+                    <p class="text-sm text-slate-200 font-medium" x-text="log.action"></p>
+                    <p class="text-xs text-slate-400" x-text="'Bởi: ' + log.user"></p>
+                  </div>
+                </div>
+                <span class="text-xs bg-slate-800 text-slate-300 px-2 py-1 rounded" x-text="log.module"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHÂN HỆ 2: WAREHOUSE MANAGEMENT -->
+      <div x-show="activeTab === 'warehouse'" class="space-y-6">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold text-white">Quản Lý Kho Vật Tư & Xuất Nhập (ACID Mock Backend)</h2>
+          <button @click="triggerQuickModal = true" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium shadow">
+            + Lập Phiếu Xuất/Nhập
+          </button>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <!-- Bảng tồn kho hiển thị thông tin và cảnh báo theo từng vật tư. -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-950 text-slate-400 uppercase text-xs">
+                <tr>
+                  <th class="p-3">Mã SKU</th>
+                  <th class="p-3">Tên Vật Tư</th>
+                  <th class="p-3">Vị Trí Kho</th>
+                  <th class="p-3">Tồn Kho</th>
+                  <th class="p-3">Đơn Giá (VNĐ)</th>
+                  <th class="p-3">Trạng Thái</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800">
+                <template x-for="mat in materials">
+                  <tr class="hover:bg-slate-800/40">
+                    <td class="p-3 font-mono text-indigo-400" x-text="mat.code"></td>
+                    <td class="p-3 font-medium text-white" x-text="mat.name"></td>
+                    <td class="p-3 text-slate-400" x-text="mat.location"></td>
+                    <td class="p-3 font-bold" x-text="mat.quantity + ' ' + mat.unit"></td>
+                    <td class="p-3 text-slate-300" x-text="mat.unitPrice.toLocaleString() + ' đ'"></td>
+                    <td class="p-3">
+                      <span :class="mat.status === 'LOW_STOCK' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'" class="px-2.5 py-1 rounded-full text-xs font-medium border">
+                        <span x-text="mat.status === 'LOW_STOCK' ? 'Cần nhập gấp' : 'Đủ tồn kho'"></span>
+                      </span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHÂN HỆ 3 & 4: PROJECTS & SMART BOM CHECKER -->
+      <div x-show="activeTab === 'projects'" class="space-y-6">
+        <h2 class="text-xl font-bold text-white">Điều Hành Dự Án & Smart BOM Auto-Checker</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Thông tin tiến độ dự án và công cụ đối soát BOM. -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h3 class="text-lg font-semibold text-white mb-2">Nhà máy Sản xuất Năng lượng Xanh Bình Định</h3>
+            <p class="text-sm text-slate-400 mb-4">Tiến độ thi công cơ điện & lắp đặt trạm biến áp</p>
+            <div class="w-full bg-slate-800 rounded-full h-3 mb-3 overflow-hidden">
+              <div class="bg-indigo-500 h-3 rounded-full w-[45%]"></div>
+            </div>
+            <span class="text-xs text-indigo-400 font-semibold">Tiến độ: 45% (Đang thực hiện)</span>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-white mb-2">Smart BOM Auto-Checker</h3>
+              <p class="text-sm text-slate-400">Kiểm tra tức thì xem kho có đủ vật tư để lắp đặt hệ thống hay không.</p>
+            </div>
+            <button @click="runBOMCheck()" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-xl transition shadow">
+              Bấm 1 Nút Đối Soát Kho Thực Tế
+            </button>
+          </div>
+        </div>
+
+        <!-- Kết quả kiểm tra định mức vật tư so với tồn kho hiện tại. -->
+        <div x-show="bomResultShow" class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+          <h4 class="text-md font-semibold text-white mb-3">Kết quả đối soát BOM:</h4>
+          <div class="space-y-2 text-sm">
+            <div class="p-3 bg-slate-950 rounded-xl flex justify-between items-center border border-emerald-500/30">
+              <span>Cáp Đồng Lực Cadivi 4x50mm2 (Cần: 100 Mét)</span>
+              <span class="text-amber-400 font-semibold">Kho còn 150 Mét (Đủ thi công)</span>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-xl flex justify-between items-center border border-emerald-500/30">
+              <span>Bu-lông cường độ cao M16x80 (Cần: 500 Cái)</span>
+              <span class="text-emerald-400 font-semibold">Kho còn 2,500 Cái (Đủ thi công)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PHÂN HỆ 5: KNOWLEDGE BASE -->
+      <div x-show="activeTab === 'knowledge'" class="space-y-6">
+        <h2 class="text-xl font-bold text-white">Tra Cứu Lỗi & Sổ Tay Kỹ Thuật (Knowledge Base)</h2>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div class="border border-slate-800 rounded-xl p-4 bg-slate-950">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-mono text-amber-400 font-bold">[ERR-INV-502] Quá tải biến tần Inverter</span>
+              <span class="text-xs bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded border border-rose-500/20">Troubleshooting</span>
+            </div>
+            <p class="text-sm text-slate-300 mb-1"><strong>Triệu chứng:</strong> Biến tần báo lỗi quá dòng (Overcurrent) khi tải > 80%.</p>
+            <p class="text-sm text-slate-300 mb-1"><strong>Nguyên nhân:</strong> Quá nhiệt tản nhiệt hoặc ngắn mạch cuộn kháng.</p>
+            <p class="text-sm text-emerald-400"><strong>Cách khắc phục:</strong> 1. Kiểm tra quạt tản nhiệt. 2. Đo điện trở cách điện. 3. Reset dòng định mức.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- QUICK ACTION MODAL (XUẤT / NHẬP KHO) -->
+  <div x-show="triggerQuickModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Lập Phiếu Giao Dịch Kho (ACID Transaction)</h3>
+        <button @click="triggerQuickModal = false" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+      <div class="space-y-3">
+        <!-- Các trường lập giao dịch và vùng phản hồi thành công/lỗi. -->
+        <div>
+          <label class="text-xs text-slate-400">Loại giao dịch</label>
+          <select x-model="txType" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white mt-1">
+            <option value="IMPORT">Nhập Kho (IMPORT)</option>
+            <option value="EXPORT">Xuất Kho (EXPORT - Kiểm tra tồn real-time)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Chọn vật tư</label>
+          <select x-model="selectedMaterialId" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white mt-1">
+            <template x-for="mat in materials">
+              <option :value="mat.id" x-text="mat.name + ' (Tồn: ' + mat.quantity + ')'"></option>
+            </template>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400">Số lượng</label>
+          <input type="number" x-model.number="txQty" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-sm text-white mt-1" placeholder="Nhập số lượng...">
+        </div>
+        <div x-show="errorMessage" class="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl" x-text="errorMessage"></div>
+        <div x-show="successMessage" class="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl" x-text="successMessage"></div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button @click="triggerQuickModal = false" class="px-4 py-2 bg-slate-800 text-sm rounded-xl text-slate-300">Đóng</button>
+        <button @click="executeTransaction()" class="px-4 py-2 bg-indigo-600 text-sm rounded-xl text-white font-medium">Xác Nhận Giao Dịch</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Khởi tạo trạng thái giao diện, dữ liệu mẫu và các thao tác của workspace.
+    function enterpriseApp() {
+      return {
+        sidebarOpen: true,
+        activeTab: 'overview',
+        triggerQuickModal: false,
+        bomResultShow: false,
+        txType: 'IMPORT',
+        selectedMaterialId: '1',
+        txQty: 10,
+        errorMessage: '',
+        successMessage: '',
+        tabs: [
+          { id: 'overview', label: 'Tổng Quan Bento', icon: 'layout-dashboard' },
+          { id: 'warehouse', label: 'Kho & Xuất Nhập', icon: 'package' },
+          { id: 'projects', label: 'Dự Án & BOM', icon: 'folder-kanban' },
+          { id: 'knowledge', label: 'Tra Cứu Lỗi (KB)', icon: 'book-open' }
+        ],
+        materials: [
+          { id: '1', code: 'MAT-EL-001', name: 'Cáp Đồng Lực Cadivi 4x50mm2', location: 'Kệ A1-02', quantity: 150, minQuantity: 200, unit: 'Mét', unitPrice: 125000, status: 'LOW_STOCK' },
+          { id: '2', code: 'MAT-ME-002', name: 'Bu-lông cường độ cao M16x80', location: 'Kệ B2-05', quantity: 2500, minQuantity: 500, unit: 'Cái', unitPrice: 8500, status: 'IN_STOCK' }
+        ],
+        auditLogs: [
+          { time: '14:20', user: 'Nguyễn Văn A', action: 'Xuất kho cáp điện cho dự án', module: 'WAREHOUSE' },
+          { time: '13:45', user: 'Trần Thị B', action: 'Nhập kho 500 Bu-lông M16', module: 'WAREHOUSE' },
+          { time: '11:10', user: 'Lê Hoàng C', action: 'Cập nhật Task dự án Solar Farm', module: 'PROJECT' }
+        ],
+        // Xử lý đối soát BOM và cập nhật tồn kho sau giao dịch.
+        runBOMCheck() {
+          this.bomResultShow = true;
+        },
+        executeTransaction() {
+          this.errorMessage = '';
+          this.successMessage = '';
+          const mat = this.materials.find(m => m.id === this.selectedMaterialId);
+          if (!mat) return;
+
+          if (this.txType === 'EXPORT') {
+            if (mat.quantity < this.txQty) {
+              this.errorMessage = `Lỗi ACID: Kho không đủ số lượng! Tồn kho hiện tại: ${mat.quantity}, yêu cầu xuất: ${this.txQty}`;
+              return;
+            }
+            mat.quantity -= this.txQty;
+          } else {
+            mat.quantity += this.txQty;
+          }
+
+          mat.status = mat.quantity <= mat.minQuantity ? 'LOW_STOCK' : 'IN_STOCK';
+          this.successMessage = `Giao dịch thành công! Đã ghi Audit Log và cập nhật kho thực tế.`;
+          
+          this.auditLogs.unshift({
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            user: 'System Admin',
+            action: `${this.txType === 'IMPORT' ? 'Nhập' : 'Xuất'} kho ${this.txQty} đơn vị vật tư ${mat.name}`,
+            module: 'WAREHOUSE'
+          });
+
+          setTimeout(() => {
+            this.triggerQuickModal = false;
+            this.successMessage = '';
+          }, 1500);
+        }
+      }
+    }
+
+    // Nạp biểu tượng sau khi cấu trúc trang đã sẵn sàng.
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

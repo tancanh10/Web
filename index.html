@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <!-- ================= CẤU HÌNH TRANG, THƯ VIỆN VÀ THEME ================= -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Kho Điện Tử & Dự Toán BOM</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Flaticon UIcons -->
+    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/uicons-regular-straight/css/uicons-regular-straight.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: 'var(--app-brand-50)',
+                            100: 'var(--app-brand-100)',
+                            500: 'var(--app-brand)',
+                            600: 'var(--app-brand)',
+                            700: 'var(--app-brand-hover)',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+    <div id="notificationRegion" class="notification-region" aria-live="polite" aria-relevant="additions"></div>
+    <!-- ================= ĐĂNG NHẬP CỤC BỘ ================= -->
+    <section id="localLoginView" class="min-h-screen bg-gradient-to-br from-indigo-900 via-slate-900 to-slate-950 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 space-y-6 border border-slate-100">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl text-2xl shadow-inner mb-1">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">Naphutech Inventory System</h1>
+                <p class="text-xs text-slate-500">Trang chủ quản lý kho vật tư & dự toán sản xuất điện tử</p>
+            </div>
+
+            <form id="localLoginForm" onsubmit="handleLocalLogin(event)" class="space-y-4">
+                <div>
+                    <label for="loginUsername" class="block text-xs font-semibold uppercase text-slate-500 mb-1">Email thành viên</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="email" id="loginUsername" required autocomplete="username" placeholder="Email được quản trị viên mời" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="loginPassword" class="block text-xs font-semibold uppercase text-slate-500 mb-1">Mật khẩu</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="Nhập mật khẩu" class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div id="localLoginError" role="alert" aria-live="polite" class="hidden text-xs text-rose-600 text-center font-medium bg-rose-50 p-2.5 rounded-lg border border-rose-100"></div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập hệ thống
+                </button>
+            </form>
+            <div class="local-login-info">
+                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                <span>Chỉ thành viên được quản trị viên mời mới có thể đăng nhập.</span>
+            </div>
+            <p class="local-login-notice">Dữ liệu kho và công việc được chia sẻ giữa các thành viên đã đăng nhập.</p>
+        </div>
+    </section>
+
+    <div id="appShell" class="min-h-screen hidden flex-col text-slate-800">
+
+    <!-- ================= THANH ĐIỀU HƯỚNG TRÊN VÀ TÀI KHOẢN ================= -->
+    <header class="app-topbar">
+        <div class="app-topbar-brand">
+            <span class="app-brand-mark"><i class="fa-solid fa-microchip" aria-hidden="true"></i></span>
+            <span><strong>NAPHUTECH</strong><small>Inventory &amp; BOM Studio</small></span>
+        </div>
+        <div class="app-topbar-actions">
+            <label class="dashboard-search" for="globalDashboardSearch">
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input id="globalDashboardSearch" type="search" placeholder="Tìm vật tư, sản phẩm, dự án..." data-i18n-placeholder="dashboardSearchPlaceholder" onkeydown="handleGlobalDashboardSearch(event)" aria-label="Tìm kiếm toàn hệ thống">
+                <kbd>⌘ K</kbd>
+            </label>
+            <label class="dashboard-range-picker" for="dashboardRange">
+                <i class="fa-regular fa-calendar" aria-hidden="true"></i>
+                <select id="dashboardRange" onchange="setDashboardRange(this.value)" aria-label="Khoảng thời gian biểu đồ">
+                    <option value="7" data-i18n="last7Days">7 ngày qua</option>
+                    <option value="30" data-i18n="last30Days">30 ngày qua</option>
+                    <option value="90" data-i18n="last90Days">90 ngày qua</option>
+                </select>
+            </label>
+            <label class="sr-only" for="languageSelector" data-i18n="language">Ngôn ngữ</label>
+            <div class="language-picker">
+                <i class="fa-solid fa-globe" aria-hidden="true"></i>
+                <select id="languageSelector" onchange="setAppLanguage(this.value)" aria-label="Chọn ngôn ngữ">
+                    <option value="vi">Tiếng Việt</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+            <div class="topbar-popover-wrap">
+                <button id="notificationButton" type="button" class="topbar-icon-button" onclick="toggleTopbarPopover('notificationPopover')" aria-label="Thông báo" aria-expanded="false">
+                    <i class="fa-regular fa-bell" aria-hidden="true"></i>
+                    <span id="notificationCount" class="topbar-notification-count hidden">0</span>
+                </button>
+                <div id="notificationPopover" class="topbar-popover hidden">
+                    <div class="topbar-popover-heading"><strong data-i18n="notifications">Thông báo</strong><span id="notificationPopoverSummary"></span></div>
+                    <div id="notificationList" class="topbar-notification-list"></div>
+                    <button type="button" class="topbar-popover-link" onclick="switchTab('inventory'); closeTopbarPopovers()" data-i18n="reviewInventory">Xem kho vật tư</button>
+                </div>
+            </div>
+            <span class="topbar-divider" aria-hidden="true"></span>
+            <div class="topbar-popover-wrap">
+                <button id="accountButton" type="button" class="topbar-account-button" onclick="toggleTopbarPopover('accountPopover')" aria-expanded="false">
+                    <span id="topbarUserInitials" class="topbar-avatar">NT</span>
+                    <span class="topbar-account-copy"><strong id="topbarUserName">Naphutech Admin</strong><small data-i18n="signedInAccount">Tài khoản đang đăng nhập</small></span>
+                    <i class="fa-solid fa-chevron-down topbar-account-chevron" aria-hidden="true"></i>
+                </button>
+                <div id="accountPopover" class="topbar-popover topbar-account-popover hidden">
+                    <div class="account-popover-user"><span id="accountPopoverInitials" class="topbar-avatar">NT</span><span><strong id="accountPopoverName">Naphutech Admin</strong><small data-i18n="activeSession">Phiên làm việc đang hoạt động</small></span></div>
+                    <button type="button" class="topbar-popover-link account-logout-button" onclick="toggleAuthModal()"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span data-i18n="signOut">Đăng xuất</span></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="appWorkspace" class="flex min-h-0 flex-1">
+
+    <!-- ================= THANH ĐIỀU HƯỚNG BÊN ================= -->
+    <!-- LEFT SIDEBAR -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between flex-shrink-0 min-h-screen sticky top-0 h-screen z-30 shadow-xl border-r border-slate-800">
+        <div>
+            <!-- Header Logo -->
+            <div class="p-5 flex items-center gap-3 border-b border-slate-800 bg-slate-950/40">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/30">
+                    <i class="fa-solid fa-microchip text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold text-white leading-tight">Naphutech Inventory</h1>
+                    <p class="text-[11px] text-slate-400">Quản Lý Kho & Dự toán</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="p-3 space-y-1 text-sm font-medium max-h-[calc(100vh-180px)] overflow-y-auto">
+                <div class="pb-3 mb-3 border-b border-slate-800/80">
+                    <p class="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500" data-i18n="mainMenu">Menu chính</p>
+                    <button onclick="switchTab('overview')" id="side-tab-overview" class="side-tab w-full text-left px-3 py-2.5 rounded-xl text-white bg-brand-600 shadow-lg shadow-indigo-950/20 flex items-center gap-2.5 text-xs font-semibold transition-colors">
+                        <i class="fa-solid fa-chart-pie w-4 text-center"></i><span data-i18n="overview">Tổng quan</span>
+                </div>
+                <div class="space-y-1">
+                    <button onclick="toggleSubMenu()" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                        <span class="flex items-center gap-2.5 font-semibold text-xs tracking-wider uppercase text-slate-400">
+                            <i class="fa-solid fa-boxes-packing text-brand-500"></i> Quản Lý Vật Tư
+                        </span>
+                        <i id="subMenuArrow" class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                    </button>
+
+                    <!-- Subtabs -->
+                    <div id="subMenuContainer" class="pl-4 space-y-1 border-l-2 border-slate-800 ml-3">
+                        <button onclick="switchTab('inventory')" id="side-tab-inventory" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-warehouse w-4 text-center"></i> Kho Vật Tư
+                        </button>
+                        <button onclick="switchTab('bom')" id="side-tab-bom" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-calculator w-4 text-center"></i> Dự Toán
+                        </button>
+                        <button onclick="switchTab('transactions')" id="side-tab-transactions" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-right-left w-4 text-center"></i> Xuất / Nhập
+                        </button>
+                        <button onclick="switchTab('procurement')" id="side-tab-procurement" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-cart-shopping w-4 text-center"></i> Danh Sách Mua
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <button onclick="toggleWorkspaceMenu()" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                        <span class="flex items-center gap-2.5 font-semibold text-xs tracking-wider uppercase text-slate-400">
+                            <i class="fa-solid fa-layer-group text-brand-500"></i> Không Gian Làm Việc
+                        </span>
+                        <i id="workspaceMenuArrow" class="fa-solid fa-chevron-down text-xs text-slate-500 transition-transform duration-200"></i>
+                    </button>
+                    <div id="workspaceMenuContainer" class="hidden pl-4 space-y-1 border-l-2 border-slate-800 ml-3">
+                        <button onclick="switchTab('dashboard')" id="side-tab-dashboard" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-list-check w-4 text-center"></i><span data-i18n="workDashboard">Công việc</span>
+                        </button>
+                        <button onclick="switchTab('calendar')" id="side-tab-calendar" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-calendar-days w-4 text-center"></i> Lịch
+                        </button>
+                        <button onclick="switchTab('projects')" id="side-tab-projects" class="side-tab w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                            <i class="fa-solid fa-folder-open w-4 text-center"></i> Dự Án
+                        </button>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-3 mt-3 border-t border-slate-800/80 space-y-1">
+                    <p class="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500" data-i18n="insights">Phân tích &amp; hỗ trợ</p>
+                    <button onclick="switchTab('reports')" id="side-tab-reports" class="side-tab w-full text-left px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                        <i class="fa-solid fa-chart-column w-4 text-center"></i><span data-i18n="reports">Báo cáo thống kê</span>
+                    </button>
+                    <button onclick="switchTab('guide')" id="side-tab-guide" class="side-tab w-full text-left px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                        <i class="fa-solid fa-book-open w-4 text-center"></i><span data-i18n="workGuide">Hướng dẫn công việc</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="side-tab-settings" class="side-tab w-full text-left px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-medium transition-colors">
+                        <i class="fa-solid fa-gear w-4 text-center"></i><span data-i18n="settings">Cài đặt</span>
+                    </button>
+                </div>
+
+                <!-- Independent Tab: History -->
+                <div class="pt-4 border-t border-slate-800/80 mt-4">
+                    <button onclick="switchTab('history')" id="side-tab-history" class="side-tab w-full text-left px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white flex items-center gap-2.5 text-xs font-semibold uppercase tracking-wider transition-colors">
+                        <i class="fa-solid fa-clock-rotate-left w-4 text-center text-amber-500"></i> Lịch Sử Giao Dịch
+                    </button>
+                </div>
+            </nav>
+        </div>
+        <span id="currentUserDisplay" class="hidden" aria-hidden="true">Admin Kỹ Thuật</span>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 overflow-y-auto min-w-0 p-6">
+        <!-- ================= TAB 1: KHO VẬT TƯ ================= -->
+        <section id="content-inventory" class="tab-content space-y-5">
+            <div class="tab-heading flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Kho Vật Tư Linh Kiện</h2>
+                    <p class="text-xs text-slate-500">Quản lý số lượng tồn kho, đơn giá và nguồn mua sắm</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" aria-label="Tổng quan trạng thái kho" aria-live="polite">
+                <div class="inventory-summary-card rounded-xl px-4 py-3.5">
+                    <p id="invStockTypeCount" class="text-2xl font-bold text-slate-800">0</p>
+                    <p class="mt-1 text-xs text-slate-400">Vật tư</p>
+                </div>
+                <div class="inventory-summary-card rounded-xl px-4 py-3.5">
+                    <p id="invTotalStockQty" class="text-2xl font-bold text-slate-800">0</p>
+                    <p class="mt-1 text-xs text-slate-400">Tổng số lượng tồn</p>
+                </div>
+                <div class="inventory-summary-card rounded-xl px-4 py-3.5">
+                    <p id="invOutOfStockCount" class="text-2xl font-bold text-slate-800">0</p>
+                    <p class="mt-1 text-xs text-slate-400">Hết hàng</p>
+                </div>
+            </div>
+
+            <!-- Search & Batch Actions -->
+            <div class="inventory-toolbar bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="inventory-toolbar-filters">
+                    <select id="inventoryProjectFilter" onchange="renderInventory()" aria-label="Lọc theo dự án"
+                        class="inventory-toolbar-select px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="__all__">Tất cả dự án</option>
+                    </select>
+                    <select id="inventoryCategoryFilter" onchange="renderInventory()" aria-label="Lọc theo nhóm linh kiện"
+                        class="inventory-toolbar-select px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="all">Tất cả loại vật tư</option>
+                        <option value="passive">Linh kiện thụ động</option>
+                        <option value="sensor">Cảm biến</option>
+                        <option value="board">Mạch</option>
+                        <option value="chip">IC/Chip</option>
+                        <option value="other">Linh kiện khác</option>
+                        <option value="tool">Dụng cụ</option>
+                    </select>
+                    <div class="inventory-toolbar-search relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="inventorySearchInput" oninput="renderInventory()" placeholder="Tìm tên linh kiện, cửa hàng..." 
+                            class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="inventory-toolbar-actions" aria-label="Thao tác kho vật tư">
+                    <button type="button" onclick="openComponentModal()" aria-label="Thêm vật tư" title="Thêm vật tư" class="tab-action-button bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-all">
+                        <i class="fi fi-rs-plus" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" onclick="openInventoryImportPicker()" aria-label="Nhập từ Google Sheets" title="Nhập danh sách CSV/XLSX từ Google Sheets" class="tab-action-button inventory-import-button">
+                        <i class="fa-solid fa-file-import" aria-hidden="true"></i><span>Nhập Sheet</span>
+                    </button>
+                    <input id="inventoryImportFile" type="file" accept=".csv,.xlsx,.xls" class="hidden" onchange="handleInventoryImportFile(event)">
+                    <button onclick="exportInventoryExcel()" aria-label="Xuất Sheet" title="Xuất Sheet" class="tab-action-button bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all">
+                        <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                    </button>
+                    <button onclick="exportPDF('content-inventory')" aria-label="Xuất PDF" title="Xuất PDF" class="tab-action-button bg-slate-700 hover:bg-slate-800 text-white shadow-sm transition-all">
+                        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" onclick="deleteSelectedInventory()" aria-label="Xóa vật tư đã chọn" title="Xóa vật tư đã chọn" class="tab-action-button bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition-colors">
+                        <i class="fa-solid fa-trash-can mr-1"></i>  
+                    </button>
+                </div>
+            </div>
+
+            <!-- Datalists for Auto-suggestions -->
+            <datalist id="componentNameSuggestions"></datalist>
+            <datalist id="inventoryProjectSuggestions"></datalist>
+            <datalist id="unitSuggestions">
+                <option value="pcs"></option>
+                <option value="m"></option>
+                <option value="bộ"></option>
+                <option value="cuộn"></option>
+                <option value="hộp"></option>
+                <option value="gói"></option>
+            </datalist>
+
+            <div class="flex items-center justify-between gap-3 text-xs text-slate-500">
+                <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="selectAllInv" onchange="toggleSelectAllInv(this)" class="rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                    Chọn tất cả 
+                </label>
+                <span id="invCountText">0 linh kiện</span>
+            </div>
+            <div id="inventoryCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 printable-sheet">
+                <!-- Product-style inventory cards -->
+            </div>
+            <nav id="inventoryPagination" class="inventory-pagination no-print" aria-label="Phân trang kho vật tư"></nav>
+        </section>
+
+<!-- ================= TAB 2: DỰ TOÁN (BOM) ================= -->
+        <section id="content-bom" class="tab-content hidden space-y-5">
+            <div id="bomOverview">
+                <div class="tab-heading flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Dự Toán & Cấu Hình BOM</h2>
+                        <p class="text-xs text-slate-500">Tính toán số lượng linh kiện cần thiết theo số lượng sản phẩm dự kiến</p>
+                    </div>
+                </div>
+
+                <!-- Production Calculator Tool -->
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 mt-5">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-calculator text-brand-600"></i> Tính Toán Định Mức Linh Kiện Cần Thiết
+                    </h3>
+                
+                    <!-- Lưới 3 cột chuẩn kích thước và căn chỉnh lề dưới -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                    <!-- Cột 1: Chọn sản phẩm -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">CHỌN SẢN PHẨM</label>
+                        <select id="bomCalcProductSelect" onchange="calculateBOMRequirements()" class="w-full h-8 px-3 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Cột 2: Số lượng -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">SỐ LƯỢNG</label>
+                        <input type="number" id="bomCalcMultiplier" value="1" min="1" oninput="calculateBOMRequirements()" class="w-full h-8 px-3 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50">
+                    </div>
+
+                    <!-- Cột 3: Nút bấm (Rộng bằng 2 khung trên, cao h-10 đồng bộ) -->
+                    <div class="w-full">
+                        <button type="button" onclick="openBOMModal()" aria-label="Cấu hình sản phẩm" title="Cấu hình sản phẩm" class="tab-action-button bom-config-button bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-all">
+                            <i class="fi fi-rs-plus" aria-hidden="true"></i> Cấu Hình Sản Phẩm
+                        </button>
+                    </div>
+                    </div>
+
+                    <!-- BOM Calculation Sheet Result -->
+                    <div id="bomCalcResultArea" class="hidden space-y-3 pt-3 border-t border-slate-100">
+                    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                        <h4 class="text-xs font-bold text-slate-700 uppercase">Chi Tiết Vật Tư Cần Thiết</h4>
+                        
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button" onclick="addBomToPurchaseList()" aria-label="Thêm vào danh sách mua" title="Thêm vào danh sách mua" class="tab-action-button bg-amber-600 hover:bg-amber-700 text-white shadow-sm transition-all">
+                                <i class="fi fi-rs-plus" aria-hidden="true"></i> Thêm
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
+                                    <th class="py-3 px-4 w-12 text-center">STT</th>
+                                    <th class="py-3 px-4 w-12">Hình</th>
+                                    <th class="py-3 px-4">Tên Linh Kiện</th>
+                                    <th class="py-3 px-4 text-center">ĐVT</th>
+                                    <th class="py-3 px-4 text-right">SL Cần Thiết</th>
+                                    <th class="py-3 px-4 text-right">Tồn Kho Hiện Tại</th>
+                                    <th class="py-3 px-4 text-right">Cần Mua Thêm</th>
+                                    <th class="py-3 px-4">Nguồn / Link Mua</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bomCalcTableBody" class="divide-y divide-slate-100 text-xs">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800">Sản phẩm đã cấu hình</h3>
+                        <p class="text-xs text-slate-500"><span id="bomProductCount">0</span> sản phẩm BOM</p>
+                    </div>
+                    <button type="button" onclick="showConfiguredBOMProducts()" aria-label="Xem sản phẩm BOM đã cấu hình" title="Xem sản phẩm BOM đã cấu hình" class="tab-action-button bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-all">
+                        <i class="fa-solid fa-list"></i> Xem chi tiết
+                    </button>
+                </div>
+            </div>
+
+            <div id="bomProductsView" class="hidden space-y-5">
+                <div class="tab-heading flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">Sản Phẩm Đã Cấu Hình BOM</h2>
+                        <p class="text-xs text-slate-500">Danh sách chi tiết tất cả sản phẩm và định mức linh kiện</p>
+                    </div>
+                    <button type="button" onclick="showBOMOverview()" aria-label="Quay lại tổng quan BOM" title="Quay lại tổng quan BOM" class="tab-action-button bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
+                        <i class="fa-solid fa-arrow-left"></i> Quay lại 
+                    </button>
+                </div>
+                <div id="bomProductCardsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dynamic cards -->
+                </div>
+            </div>
+        </section>
+
+<!-- ================= TAB 3: XUẤT / NHẬP ================= -->
+        <section id="content-transactions" class="tab-content hidden space-y-5">
+            <div class="tab-heading flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Quản Lý Xuất / Nhập Kho</h2>
+                    <p class="text-xs text-slate-500">Thao tác xuất nhập lẻ hoặc tích chọn xuất nhập hàng loạt nhanh chóng</p>
+                </div>
+            </div>
+
+            <!-- SHEET XUẤT NHẬP HÀNG LOẠT NHANH -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-3">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-brand-600"></i> Thao Tác Xuất/Nhập 
+                    </h3>
+                    
+                    <!-- Nhóm nút bấm thao tác -->
+                    <div class="flex flex-wrap gap-2">
+                        <button id="addTransactionComponentsButton" type="button" onclick="openTransactionComponentPicker()" aria-label="Thêm linh kiện" title="Thêm linh kiện" class="tab-action-button bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm">
+                            <i class="fi fi-rs-plus" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" onclick="openProductExportModal()" aria-label="Xuất theo sản phẩm" title="Xuất theo sản phẩm" class="tab-action-button bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                            <i class="fa-solid fa-cubes" aria-hidden="true"></i>
+                        </button>
+                        <button onclick="exportPDF('content-transactions')" aria-label="Xuất PDF" title="Xuất PDF" class="tab-action-button bg-slate-600 hover:bg-slate-700 text-white shadow-sm">
+                            <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                        </button>
+                        <button onclick="executeBatchTransaction('OUT')" aria-label="Xuất Kho" title="Xuất Kho" class="tab-action-button bg-amber-600 hover:bg-amber-700 text-white shadow-sm">
+                            <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
+                        </button>
+                        <button onclick="executeBatchTransaction('IN')" aria-label="Nhập Kho" title="Nhập Kho" class="tab-action-button bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                            <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h4 class="mb-3 text-xs font-bold uppercase tracking-wide text-slate-600">Thông tin phiếu xuất / nhập</h4>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                            <label for="transactionDate" class="mb-1 block text-[11px] font-semibold text-slate-500">THỜI GIAN LẬP PHIẾU</label>
+                            <input id="transactionDate" type="datetime-local" readonly class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div>
+                            <label for="transactionActor" class="mb-1 block text-[11px] font-semibold text-slate-500">NGƯỜI LÀM PHIẾU</label>
+                            <input id="transactionActor" type="text" required placeholder="Nhập tên người làm phiếu" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div>
+                            <label for="transactionProject" class="mb-1 block text-[11px] font-semibold text-slate-500">DỰ ÁN / KHO</label>
+                            <select id="transactionProject" required onchange="handleTransactionProjectChange()" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                                <option value="">Chọn dự án</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="transactionLocation" class="mb-1 block text-[11px] font-semibold text-slate-500">ĐỊA ĐIỂM XUẤT / NHẬP</label>
+                            <input id="transactionLocation" type="text" placeholder="Nhập địa điểm" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div class="sm:col-span-2 xl:col-span-4">
+                            <label for="transactionReason" class="mb-1 block text-[11px] font-semibold text-slate-500">LÝ DO</label>
+                            <textarea id="transactionReason" rows="2" placeholder="Nhập lý do xuất / nhập kho" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"></textarea>
+                        </div>
+                    </div>
+                    <p id="transactionProjectStockHint" class="mt-2 text-[11px] text-slate-500">Thêm linh kiện từ toàn bộ kho vật tư. Dự án/kho chỉ là nơi nhận hoặc xuất các linh kiện.</p>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
+                                <th class="py-3 px-4 w-10 text-center">
+                                    <input type="checkbox" id="selectAllTxSheet" onchange="toggleSelectAllTxSheet(this)" class="rounded text-brand-600">
+                                </th>
+                                <th class="py-3 px-4 w-12 text-center">STT</th>
+                                <th class="py-3 px-4 w-12">Hình</th>
+                                <th class="py-3 px-4">Tên Linh Kiện / Dụng Cụ</th>
+                                <th class="py-3 px-4 text-center">ĐVT</th>
+                                <th class="py-3 px-4 text-right">Tồn Kho hiện tại</th>
+                                <th class="py-3 px-4 w-32 text-center">Số Lượng Xuất/Nhập</th>
+                                <th class="py-3 px-4 text-right">Đơn Giá</th>
+                                <th class="py-3 px-4 text-right">Thành Tiền</th>
+                                <th class="py-3 px-4">Nguồn / Link Mua</th>
+                                <!-- CỘT MỚI: Thao Tác (Xóa) -->
+                                <th class="py-3 px-4 w-16 text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="batchTxTableBody" class="divide-y divide-slate-100 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= MODAL: CHỌN LINH KIỆN CHO PHIẾU XUẤT / NHẬP ================= -->
+        <div id="transactionComponentPickerModal" class="modal-backdrop fixed inset-0 z-[75] flex items-center justify-center bg-slate-900/50 p-4 hidden">
+            <div class="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-xl">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Thêm linh kiện</h3>
+                        <p class="mt-1 text-xs text-slate-500">Chọn linh kiện từ toàn bộ kho vật tư và số lượng cần. Dự án/kho được chọn bên ngoài chỉ là kho đích khi lập phiếu.</p>
+                    </div>
+                    <button type="button" onclick="closeTransactionComponentPicker()" aria-label="Đóng" class="text-xl text-slate-400 hover:text-slate-700">&times;</button>
+                </div>
+                <div class="flex-1 space-y-4 overflow-y-auto p-5">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <input id="transactionComponentSearch" type="search" oninput="renderTransactionComponentPicker()" placeholder="Tìm linh kiện trong kho..." class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs focus:border-brand-500 focus:outline-none">
+                        <select id="transactionComponentCategory" onchange="renderTransactionComponentPicker()" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs">
+                            <option value="all">Tất cả loại vật tư</option>
+                            <option value="passive">Linh kiện thụ động</option>
+                            <option value="sensor">Cảm biến</option>
+                            <option value="board">Mạch</option>
+                            <option value="chip">IC/Chip</option>
+                            <option value="other">Linh kiện khác</option>
+                            <option value="tool">Dụng cụ</option>
+                        </select>
+                    </div>
+                    <div class="max-h-72 overflow-auto rounded-xl border border-slate-200">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead class="sticky top-0 border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-2.5 text-center">Chọn</th>
+                                    <th class="px-3 py-2.5">Tên linh kiện</th>
+                                    <th class="px-3 py-2.5 text-center">ĐVT</th>
+                                    <th class="px-3 py-2.5 text-right">Tồn kho</th>
+                                    <th class="px-3 py-2.5 text-center">Số lượng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionComponentPickerBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
+                    <button type="button" onclick="closeTransactionComponentPicker()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">Hủy</button>
+                    <button type="button" onclick="addSelectedComponentsToTransactionSheet()" class="rounded-lg bg-indigo-600 px-5 py-2 text-xs font-semibold text-white hover:bg-indigo-700">
+                        <i class="fi fi-rs-plus mr-1" aria-hidden="true"></i> Thêm
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: XUẤT KHO THEO SẢN PHẨM ================= -->
+        <div id="productExportModal" class="modal-backdrop fixed inset-0 z-[76] flex items-center justify-center bg-slate-900/50 p-4 hidden">
+            <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-6 py-4">
+                    <div>
+                        <h3 class="text-base font-bold text-slate-800">Phiếu xuất linh kiện theo sản phẩm</h3>
+                        <p class="mt-1 text-xs text-slate-500">Chỉ thực hiện xuất kho theo định mức sản phẩm; không hỗ trợ nhập kho.</p>
+                    </div>
+                    <button type="button" onclick="closeProductExportModal()" aria-label="Đóng" class="text-xl text-slate-400 hover:text-slate-700">&times;</button>
+                </div>
+                <div class="flex-1 space-y-4 overflow-y-auto p-5">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div>
+                            <label for="productExportDate" class="mb-1 block text-[11px] font-semibold text-slate-500">NGÀY, THÁNG, NĂM VÀ THỜI GIAN LẬP PHIẾU</label>
+                            <input id="productExportDate" type="datetime-local" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div>
+                            <label for="productExportActor" class="mb-1 block text-[11px] font-semibold text-slate-500">NGƯỜI LÀM PHIẾU</label>
+                            <input id="productExportActor" type="text" required placeholder="Nhập tên người làm phiếu" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div>
+                            <label for="productExportProject" class="mb-1 block text-[11px] font-semibold text-slate-500">DỰ ÁN / KHO</label>
+                            <select id="productExportProject" required onchange="renderProductExportRequirements()" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                                <option value="">Chọn dự án/kho</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="productExportLocation" class="mb-1 block text-[11px] font-semibold text-slate-500">ĐỊA ĐIỂM</label>
+                            <input id="productExportLocation" type="text" placeholder="Nhập địa điểm xuất (không bắt buộc)" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div>
+                            <label for="productExportProduct" class="mb-1 block text-[11px] font-semibold text-slate-500">SẢN PHẨM BOM</label>
+                            <select id="productExportProduct" required onchange="renderProductExportRequirements()" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                                <option value="">Chọn sản phẩm</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="productExportQuantity" class="mb-1 block text-[11px] font-semibold text-slate-500">SỐ LƯỢNG SẢN PHẨM</label>
+                            <input id="productExportQuantity" type="number" min="1" step="1" value="1" oninput="renderProductExportRequirements()" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="productExportReason" class="mb-1 block text-[11px] font-semibold text-slate-500">LÝ DO</label>
+                            <input id="productExportReason" type="text" placeholder="Nhập lý do xuất kho (không bắt buộc)" class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full border-collapse text-left text-xs">
+                            <thead class="border-b border-slate-200 bg-slate-50 text-[10px] font-bold uppercase text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-2.5">Linh kiện</th>
+                                    <th class="px-3 py-2.5">Kho xuất</th>
+                                    <th class="px-3 py-2.5 text-center">ĐVT</th>
+                                    <th class="px-3 py-2.5 text-right">Tồn kho</th>
+                                    <th class="px-3 py-2.5 text-right">Số lượng xuất</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productExportRequirementsBody" class="divide-y divide-slate-100">
+                                <tr><td colspan="5" class="px-3 py-6 text-center text-slate-500">Chọn dự án/kho và sản phẩm để xem linh kiện cần xuất.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
+                    <button type="button" onclick="closeProductExportModal()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">Hủy</button>
+                    <button type="button" onclick="executeProductExport()" class="rounded-lg bg-amber-600 px-5 py-2 text-xs font-semibold text-white hover:bg-amber-700">
+                        <i class="fa-solid fa-arrow-right-from-bracket mr-1" aria-hidden="true"></i> Xuất
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODAL: XÁC NHẬN LINH KIỆN THIẾU KHI XUẤT ================= -->
+        <div id="productExportShortageModal" class="modal-backdrop fixed inset-0 z-[78] flex items-center justify-center bg-slate-900/60 p-4 hidden">
+            <div class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl">
+                <div class="border-b border-slate-100 bg-amber-50 px-6 py-4">
+                    <h3 class="text-base font-bold text-slate-800">Thiếu linh kiện trong kho</h3>
+                </div>
+                <div class="space-y-3 p-6">
+                    <p class="text-sm text-slate-700">Bạn có thêm vào danh sách mua số lượng còn thiếu không?</p>
+                    <div id="productExportShortageList" class="max-h-48 space-y-2 overflow-y-auto rounded-xl bg-slate-50 p-3 text-xs text-slate-600"></div>
+                </div>
+                <div class="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
+                    <button type="button" onclick="cancelProductExportShortage()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">Hủy</button>
+                    <button type="button" onclick="addProductExportShortagesToProcurement()" class="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"><i class="fi fi-rs-plus mr-1" aria-hidden="true"></i>Thêm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: DANH SÁCH MUA HÀNG ================= -->
+        <section id="content-procurement" class="tab-content hidden space-y-5">
+            <div class="tab-heading flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Quản Lý Danh Sách Mua</h2>
+                    <p class="text-xs text-slate-500">Quản lý linh kiện cần mua và theo dõi tổng chi phí dự kiến</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4 printable-sheet">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-3">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-cart-shopping text-brand-600"></i> Danh Sách Mua
+                    </h3>
+                    <div class="flex flex-wrap gap-2">
+                    <button type="button" onclick="openSelectFromInventoryModal()" aria-label="Thêm linh kiện vào danh sách mua" title="Thêm linh kiện vào danh sách mua" class="tab-action-button bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/20 transition-all">
+                        <i class="fi fi-rs-plus" aria-hidden="true"></i>
+                    </button>
+                    <button onclick="exportProcurementExcel()" aria-label="Xuất Sheet" title="Xuất Sheet" class="tab-action-button bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <i class="fa-solid fa-file-excel" aria-hidden="true"></i>
+                    </button>
+                    <button onclick="exportPDF('content-procurement')" aria-label="Xuất PDF" title="Xuất PDF" class="tab-action-button bg-slate-700 hover:bg-slate-800 text-white">
+                        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i>
+                    </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <th class="py-3.5 px-4 w-12 text-center">STT</th>
+                                <th class="py-3.5 px-4 w-12">Hình</th>
+                                <th class="py-3.5 px-4">Tên Linh Kiện</th>
+                                <th class="py-3.5 px-4 text-center">ĐVT</th>
+                                <th class="py-3.5 px-4 text-right">Tồn Hiện Tại</th>
+                                <th class="py-3.5 px-4 w-32 text-center">Số Lượng Cần Mua</th>
+                                <th class="py-3.5 px-4 w-40 text-right">Đơn Giá (VND)</th>
+                                <th class="py-3.5 px-4 text-right">Thành Tiền</th>
+                                <th class="py-3.5 px-4">Cửa Hàng / Link Mua</th>
+                                <th class="py-3.5 px-4 text-center no-print">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="procurementTableBody" class="divide-y divide-slate-100 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Total Cost Summary Footer -->
+                <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-sm">
+                    <span class="font-bold text-slate-700">TỔNG TẤT CẢ THÀNH TIỀN:</span>
+                    <span id="procurementGrandTotal" class="text-base font-extrabold text-brand-600">0 VNĐ</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: LỊCH SỬ ================= -->
+        <section id="content-history" class="tab-content hidden space-y-5">
+            <div class="tab-heading bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800">Lịch Sử Giao Dịch Kho</h2>
+                    <p class="text-xs text-slate-500">Nhật ký biến động xuất/nhập vật tư linh kiện theo thời gian</p>
+                </div>
+                <button type="button" onclick="clearHistoryLogs()" aria-label="Xóa lịch sử giao dịch" title="Xóa lịch sử giao dịch" class="tab-action-button text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200">
+                    <i class="fa-solid fa-trash mr-1"></i> Xóa Lịch Sử
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px] gap-3">
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" aria-hidden="true"></i>
+                        <input id="historySearchInput" type="search" oninput="renderHistory()" aria-label="Tìm mã phiếu, dự án hoặc người thực hiện"
+                            placeholder="Tìm mã phiếu, dự án hoặc người thực hiện..."
+                            class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <select id="historyTypeFilter" onchange="renderHistory()" aria-label="Lọc theo loại giao dịch"
+                        class="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        <option value="all">Tất cả giao dịch</option>
+                        <option value="OUT">Xuất kho</option>
+                        <option value="IN">Nhập kho</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
+                                <th class="py-3.5 px-4">Thời Gian</th>
+                                <th class="py-3.5 px-4">Loại Giao Dịch</th>
+                                <th class="py-3.5 px-4">Tên Linh Kiện</th>
+                                <th class="py-3.5 px-4">Mã Phiếu</th>
+                                <th class="py-3.5 px-4">Dự Án</th>
+                                <th class="py-3.5 px-4 text-right">Số Lượng</th>
+                                <th class="py-3.5 px-4">Người Thực Hiện</th>
+                                <th class="py-3.5 px-4">Ghi Chú</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-100 text-xs">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="historyEmptyState" class="hidden px-4 py-8 text-center text-xs text-slate-500">Không tìm thấy giao dịch phù hợp.</p>
+            </div>
+        </section>
+
+        <!-- ================= TAB 6: TỔNG QUAN VẬN HÀNH ================= -->
+        <section id="content-overview" class="tab-content space-y-5">
+            <div class="overview-welcome">
+                <div class="overview-welcome-copy">
+                    <span class="overview-eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i><span data-i18n="operationsOverview">TỔNG QUAN VẬN HÀNH</span></span>
+                    <h2><span data-i18n="welcomeBack">Chào mừng trở lại</span>, <span id="overviewUserName">Naphutech Team</span></h2>
+                    <p id="overviewWelcomeSummary">Tổng quan hoạt động kho và sản xuất của bạn.</p>
+                </div>
+                <div class="overview-date-chip"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span id="overviewTodayLabel"></span></div>
+            </div>
+
+            <div class="overview-stat-grid">
+                <article class="overview-stat-card dashboard-metric-card">
+                    <span class="overview-stat-icon is-indigo"><i class="fa-solid fa-cubes-stacked" aria-hidden="true"></i></span>
+                    <span class="overview-stat-label" data-i18n="materialTypes">Mã vật tư</span>
+                    <strong id="overviewMaterialCount">0</strong>
+                    <small id="overviewStockSummary">Tổng số lượng tồn: 0</small>
+                    <svg class="metric-sparkline is-cyan" viewBox="0 0 120 34" aria-hidden="true"><path d="M1 27 C18 26 19 17 33 20 S53 24 65 15 S83 19 94 9 S108 13 119 3"></path></svg>
+                </article>
+                <article class="overview-stat-card dashboard-metric-card">
+                    <span class="overview-stat-icon is-rose"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
+                    <span class="overview-stat-label" data-i18n="materialsToRestock">Cần nhập thêm</span>
+                    <strong id="overviewLowStockCount">0</strong>
+                    <small data-i18n="basedOnShortage">Theo danh sách mua và tồn kho bằng 0</small>
+                    <svg class="metric-sparkline is-coral" viewBox="0 0 120 34" aria-hidden="true"><path d="M1 5 C13 12 17 6 29 13 S49 11 61 20 S79 18 91 25 S107 23 119 31"></path></svg>
+                </article>
+                <article class="overview-stat-card dashboard-metric-card">
+                    <span class="overview-stat-icon is-blue"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i></span>
+                    <span class="overview-stat-label" data-i18n="activeProjects">Dự án đang có</span>
+                    <strong id="overviewProjectCount">0</strong>
+                    <small id="overviewProjectSummary">0 công việc trong các dự án</small>
+                    <svg class="metric-sparkline is-violet" viewBox="0 0 120 34" aria-hidden="true"><path d="M1 28 C13 22 19 26 31 17 S48 22 59 14 S77 17 88 9 S107 12 119 3"></path></svg>
+                </article>
+                <article class="overview-stat-card dashboard-metric-card">
+                    <span class="overview-stat-icon is-emerald"><i class="fa-solid fa-microchip" aria-hidden="true"></i></span>
+                    <span class="overview-stat-label" data-i18n="bomProducts">Sản phẩm BOM</span>
+                    <strong id="overviewProductCount">0</strong>
+                    <small data-i18n="configuredProducts">Sản phẩm đã cấu hình định mức</small>
+                    <svg class="metric-sparkline is-emerald" viewBox="0 0 120 34" aria-hidden="true"><path d="M1 29 C13 28 18 20 30 23 S48 24 60 13 S78 19 89 10 S106 14 119 3"></path></svg>
+                </article>
+            </div>
+
+            <div class="dashboard-analytics-grid">
+                <section class="overview-panel dashboard-chart-panel">
+                    <div class="overview-panel-heading">
+                        <div><span class="overview-section-icon is-blue"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span><div><h3 data-i18n="stockMovement">Biến động kho</h3><p data-i18n="stockMovementSubtitle">Lượng vật tư nhập và xuất theo thời gian</p></div></div>
+                        <div class="dashboard-chart-toggle" role="group" aria-label="Chế độ biểu đồ">
+                            <button type="button" class="is-active" data-dashboard-period="daily" onclick="setDashboardPeriod('daily')" data-i18n="daily">Ngày</button>
+                            <button type="button" data-dashboard-period="weekly" onclick="setDashboardPeriod('weekly')" data-i18n="weekly">Tuần</button>
+                        </div>
+                    </div>
+                    <div class="dashboard-chart-legend"><span><i class="is-in"></i><span data-i18n="stockIn">Nhập kho</span></span><span><i class="is-out"></i><span data-i18n="stockOut">Xuất kho</span></span></div>
+                    <div id="dashboardPerformanceChart" class="dashboard-chart" role="img" aria-label="Biểu đồ biến động kho">
+                        <div class="dashboard-chart-tooltip hidden" id="dashboardChartTooltip"></div>
+                    </div>
+                </section>
+                <section class="overview-panel dashboard-distribution-panel">
+                    <div class="overview-panel-heading">
+                        <div><span class="overview-section-icon is-violet"><i class="fa-solid fa-chart-pie" aria-hidden="true"></i></span><div><h3 data-i18n="inventoryMix">Cơ cấu vật tư</h3><p data-i18n="inventoryMixSubtitle">Phân bổ tồn kho theo nhóm</p></div></div>
+                    </div>
+                    <div class="dashboard-donut-wrap"><div id="dashboardCategoryDonut" class="dashboard-category-donut"><div><strong id="dashboardCategoryTotal">0</strong><span data-i18n="unitsInStock">đơn vị tồn kho</span></div></div></div>
+                    <div id="dashboardCategoryLegend" class="dashboard-category-legend"></div>
+                </section>
+            </div>
+
+            <section class="overview-panel dashboard-transactions-panel">
+                <div class="overview-panel-heading">
+                    <div><span class="overview-section-icon is-amber"><i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i></span><div><h3 data-i18n="recentTransactions">Giao dịch gần đây</h3><p data-i18n="recentTransactionsSubtitle">Hoạt động xuất / nhập kho mới nhất</p></div></div>
+                    <button type="button" class="overview-text-link" onclick="switchTab('history')"><span data-i18n="viewHistory">Xem lịch sử</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div class="table-scroll">
+                    <table class="dashboard-transactions-table">
+                        <thead><tr><th data-i18n="transaction">Giao dịch</th><th data-i18n="movementType">Loại</th><th data-i18n="warehouseProject">Kho / Dự án</th><th data-i18n="quantity">Số lượng</th><th data-i18n="performedAt">Thời gian</th><th></th></tr></thead>
+                        <tbody id="overviewTransactionTable"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="overview-panel-grid dashboard-bottom-grid">
+                <section class="overview-panel">
+                    <div class="overview-panel-heading">
+                        <div><span class="overview-section-icon is-rose"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span><div><h3 data-i18n="restockNeeded">Vật tư cần bổ sung</h3><p data-i18n="restockSubtitle">Ưu tiên xử lý để không gián đoạn sản xuất</p></div></div>
+                        <button type="button" class="overview-text-link" onclick="switchTab('procurement')"><span data-i18n="viewPurchaseList">Danh sách mua</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                    <div id="overviewLowStockList" class="overview-list"></div>
+                </section>
+                <section class="overview-panel">
+                    <div class="overview-panel-heading">
+                        <div><span class="overview-section-icon is-violet"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i></span><div><h3 data-i18n="todaysSchedule">Lịch trình hôm nay</h3><p id="overviewScheduleDate"></p></div></div>
+                        <button type="button" class="overview-text-link" onclick="switchTab('calendar')"><span data-i18n="openCalendar">Mở lịch</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="overview-schedule-summary"><strong id="overviewTodayTaskCount">0</strong><span data-i18n="scheduledTasks">công việc được lên lịch</span><span class="overview-schedule-progress"><span id="overviewTodayDoneCount">0 hoàn thành</span><i aria-hidden="true">·</i><span id="overviewTodayProgress">0%</span></span></div>
+                    <div class="workspace-progress"><div id="overviewTodayProgressBar" class="workspace-progress-bar" style="width:0%"></div></div>
+                    <div id="overviewTodayScheduleList" class="overview-list overview-schedule-list"></div>
+                </section>
+            </div>
+            <section class="overview-panel dashboard-projects-panel">
+                <div class="overview-panel-heading">
+                    <div><span class="overview-section-icon is-blue"><i class="fa-solid fa-folder-tree" aria-hidden="true"></i></span><div><h3 data-i18n="projectsInProgress">Dự án đang triển khai</h3><p data-i18n="projectsSnapshot">Tình hình các dự án hiện có</p></div></div>
+                    <button type="button" class="overview-text-link" onclick="switchTab('projects')"><span data-i18n="viewProjects">Xem dự án</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                </div>
+                <div id="overviewActiveProjects" class="overview-list"></div>
+            </section>
+        </section>
+
+        <!-- ================= TAB 7: CÔNG VIỆC / KHÔNG GIAN NHÓM ================= -->
+        <section id="content-dashboard" class="tab-content hidden space-y-5">
+            <div class="tab-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl"><div><span class="overview-eyebrow" data-i18n="workspaceLabel">KHÔNG GIAN LÀM VIỆC</span><h2 class="text-2xl font-bold text-slate-800" data-i18n="workDashboard">Công việc</h2><p class="text-sm text-slate-500 mt-1" data-i18n="workDashboardSubtitle">Theo dõi nhiệm vụ và tiến độ thực hiện trong ngày.</p></div><div class="flex items-center gap-2"><label for="workspaceDashboardDate" class="text-xs font-semibold text-slate-500" data-i18n="date">Ngày:</label><input id="workspaceDashboardDate" type="date" onchange="setWorkspaceDashboardDate(this.value)" class="px-3 py-2 border border-slate-200 rounded-lg text-sm"><button onclick="switchTab('calendar')" class="overview-secondary-button" data-i18n="openCalendar"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Mở lịch</button></div></div>
+            <div class="overview-stat-grid overview-stat-grid-work">
+                <article class="overview-stat-card"><span class="overview-stat-icon is-indigo"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="tasksToday">Công việc hôm nay</span><strong id="workspaceWorkTaskCount">0</strong><small id="workspaceWorkDoneCount">0 hoàn thành</small></article>
+                <article class="overview-stat-card"><span class="overview-stat-icon is-blue"><i class="fa-regular fa-clock" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="workWindow">Khung giờ làm việc</span><strong>07:30–17:30</strong><small data-i18n="workingHours">Thời gian làm việc</small></article>
+                <article class="overview-stat-card"><span class="overview-stat-icon is-emerald"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="dailyProgress">Tiến độ trong ngày</span><strong id="workspaceWorkProgress">0%</strong><div class="workspace-progress mt-2"><div id="workspaceWorkProgressBar" class="workspace-progress-bar" style="width:0%"></div></div></article>
+            </div>
+            <section class="overview-panel notion-workspace">
+                <div class="notion-workspace-header">
+                    <div><span class="notion-eyebrow"><i class="fa-solid fa-users" aria-hidden="true"></i> KHÔNG GIAN NHÓM</span><h3>Việc cần làm &amp; ghi chú</h3><p>Nội dung được lưu cục bộ trên trình duyệt này.</p></div>
+                    <button type="button" class="overview-primary-button" onclick="openTodoEditor()"><i class="fi fi-rs-plus" aria-hidden="true"></i> Thêm công việc</button>
+                </div>
+                <div class="notion-workspace-grid">
+                    <section class="notion-database notion-tasks-database">
+                        <div class="notion-database-heading">
+                            <div><span class="notion-database-icon is-task"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><div><h4>To-do list</h4><small id="todoCountLabel">0 công việc</small></div></div>
+                            <button type="button" class="notion-icon-action" aria-label="Tạo công việc" title="Tạo công việc" onclick="openTodoEditor()"><i class="fi fi-rs-plus" aria-hidden="true"></i></button>
+                        </div>
+                        <div class="notion-task-toolbar">
+                            <label class="notion-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input id="todoSearchIt" type="search" placeholder="Tìm công việc..." oninput="renderSharedWorkspace()"></label>
+                            <div class="notion-view-tabs" role="group" aria-label="Lọc công việc">
+                                <button type="button" class="is-active" data-todo-filter="all" onclick="setTodoFilter('all')">Tất cả</button>
+                                <button type="button" data-todo-filter="todo" onclick="setTodoFilter('todo')">Chưa làm</button>
+                                <button type="button" data-todo-filter="doing" onclick="setTodoFilter('doing')">Đang làm</button>
+                                <button type="button" data-todo-filter="done" onclick="setTodoFilter('done')">Hoàn tất</button>npu
+                            </div>
+                        </div>
+                        <div id="sharedTodoList" class="notion-task-list" aria-live="polite"></div>
+                    </section>
+                    <div class="notion-workspace-side-stack">
+                        <section class="notion-database notion-notes-database">
+                            <div class="notion-database-heading">
+                                <div><span class="notion-database-icon is-note"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i></span><div><h4>Ghi chú nhóm</h4><small id="noteCountLabel">0 trang</small></div></div>
+                                <button type="button" class="notion-icon-action" aria-label="Tạo ghi chú" title="Tạo ghi chú" onclick="openNoteEditor()"><i class="fi fi-rs-plus" aria-hidden="true"></i></button>
+                            </div>
+                            <div id="sharedNotesList" class="notion-notes-grid" aria-live="polite"></div>
+                        </section>
+                        <section class="notion-database notion-schedule-database">
+                            <div class="notion-database-heading">
+                                <div><span class="notion-database-icon is-schedule"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span><div><h4 id="workspaceDashboardScheduleTitle" data-i18n="todaysSchedule">Lịch trình hôm nay</h4><small>Các việc đã lên lịch theo dự án</small></div></div>
+                                <button type="button" class="notion-icon-action" aria-label="Mở lịch" title="Mở lịch" onclick="switchTab('calendar')"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></button>
+                            </div>
+                            <div id="workspaceWorkSchedule" class="notion-schedule-list"></div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+            <div id="workspaceTodayProgressQuantity" class="hidden">0 / 0</div>
+        </section>
+
+        <!-- ================= TAB 8: LỊCH CÔNG VIỆC ================= -->
+        <section id="content-calendar" class="tab-content hidden space-y-5">
+            <div class="tab-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-5 rounded-2xl">
+                <div><h2 class="text-2xl font-bold text-slate-800">Lịch</h2><p class="text-sm text-slate-500 mt-1">Chọn một ngày để lập kế hoạch công việc</p></div>
+                <div class="flex items-center gap-2">
+                    <label for="workspaceCalendarMonthInput" class="text-xs font-semibold text-slate-600">Tháng / Năm</label>
+                    <input id="workspaceCalendarMonthInput" type="month" onchange="renderWorkspaceCalendar()" class="px-3 py-2 border border-slate-200 rounded-lg text-sm">
+                </div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-5 overflow-x-auto">
+                <div class="min-w-[760px]">
+                <div class="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-500">
+                    <span>Thứ 2</span><span>Thứ 3</span><span>Thứ 4</span><span>Thứ 5</span><span>Thứ 6</span><span>Thứ 7</span><span>Chủ Nhật</span>
+                </div>
+                <div id="workspaceCalendarGrid" class="workspace-calendar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 9: QUẢN LÝ DỰ ÁN ================= -->
+        <section id="content-projects" class="tab-content hidden space-y-5">
+            <div id="workspaceProjectsOverviewView" class="space-y-5">
+                <div class="tab-heading bg-white border border-slate-200 rounded-2xl shadow-sm px-6 py-5">
+                    <h2 class="text-base font-bold text-slate-800">Quản lý Dự Án</h2>
+                    <p id="overviewWelcomeSummary">Quản lý dự án thông minh và hiệu quả.</p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="workspace-project-stat rounded-2xl border border-slate-200 bg-white px-5 py-4 min-h-[102px] flex flex-col justify-center">
+                        <span id="workspaceProjectCount" class="text-lg font-bold text-slate-800">0</span>
+                        <span class="mt-1 text-xs text-slate-600">Dự án</span>
+                    </div>
+                    <div class="workspace-project-stat rounded-2xl border border-slate-200 bg-white px-5 py-4 min-h-[102px] flex flex-col justify-center">
+                        <span id="workspaceProjectTaskCount" class="text-lg font-bold text-slate-800">0</span>
+                        <span class="mt-1 text-xs text-slate-600">Số lượng công việc</span>
+                    </div>
+                    <div class="workspace-project-stat rounded-2xl border border-slate-200 bg-white px-5 py-4 min-h-[102px] flex flex-col justify-center">
+                        <span id="workspaceProjectCompletion" class="text-lg font-bold text-slate-800">0%</span>
+                        <span class="mt-1 text-xs text-slate-600">Hoàn thành</span>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-xl p-4">
+                    <label for="workspaceProjectOverviewSearch" class="block text-xs font-semibold text-slate-600 mb-2">TÌM KIẾM TÊN DỰ ÁN</label>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                      <div class="relative flex-1 min-w-0">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="workspaceProjectOverviewSearch" type="search" oninput="renderWorkspaceProjectSummaryTable()" placeholder="Nhập tên dự án cần tìm..." class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                      </div>
+                      <button onclick="showWorkspaceProjectCatalog()" class="px-4 py-2.5 rounded-lg bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 shadow-sm whitespace-nowrap">
+                          <i class="fa-solid fa-list mr-1"></i> Xem chi tiết
+                      </button>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[680px] text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase">
+                                <tr>
+                                    <th class="px-4 py-3.5">Tên Dự Án</th>
+                                    <th class="px-4 py-3.5 text-center">Số Lượng Công Việc</th>
+                                    <th class="px-4 py-3.5 text-center">Đã Hoàn Thành</th>
+                                    <th class="px-4 py-3.5">Phần Trăm Hoàn Thành</th>
+                                </tr>
+                            </thead>
+                            <tbody id="workspaceProjectSummaryTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="workspaceProjectsListView" class="hidden space-y-5">
+              <div class="tab-heading flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-slate-200 rounded-xl p-5">
+                <div class="flex items-center gap-3">
+                    <button onclick="showWorkspaceProjectOverview()" aria-label="Quay lại tổng quan dự án" class="w-9 h-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-arrow-left"></i></button>
+                    <div><h2 class="text-xl font-bold text-slate-800">Tất Cả Dự Án</h2><p class="text-xs text-slate-500 mt-1">Xem và chỉnh sửa cấu hình dự án</p></div>
+                </div>
+                <button onclick="openWorkspaceProjectEditor()" class="px-4 py-2.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"><i class="fi fi-rs-plus mr-1" aria-hidden="true"></i> Thêm Dự Án</button>
+              </div>
+              <div class="bg-white border border-slate-200 rounded-xl p-4">
+                  <label for="workspaceProjectSearch" class="block text-xs font-semibold text-slate-600 mb-2">TÌM KIẾM DỰ ÁN</label>
+                  <div class="flex gap-2">
+                      <input id="workspaceProjectSearch" type="search" onkeydown="if(event.key === 'Enter') searchWorkspaceProjects()" placeholder="Nhập tên dự án cần tìm..." class="flex-1 min-w-0 px-3 py-2.5 border border-slate-200 rounded-lg text-sm">
+                      <button onclick="searchWorkspaceProjects()" class="px-4 py-2.5 rounded-lg bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900"><i class="fa-solid fa-magnifying-glass mr-1"></i> Tìm Kiếm</button>
+                  </div>
+                  <p id="workspaceProjectSearchSummary" class="hidden text-xs text-slate-500 mt-2"></p>
+              </div>
+              <div id="workspaceProjectCards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+
+        </section>
+
+        <!-- ================= TAB 10: BÁO CÁO THỐNG KÊ ================= -->
+        <section id="content-reports" class="tab-content hidden space-y-5">
+            <div class="reports-heading"><div><span class="overview-eyebrow" data-i18n="reportsEyebrow">PHÂN TÍCH VẬN HÀNH</span><h2 data-i18n="reportsTitle">Báo cáo thống kê</h2><p data-i18n="reportsDescription">Số liệu tổng hợp về vật tư, dự án, sản phẩm và tiến độ công việc.</p></div><button type="button" class="overview-primary-button" onclick="printInventoryStatistics()"><i class="fa-solid fa-print" aria-hidden="true"></i><span data-i18n="printReport">In báo cáo</span></button></div>
+            <div class="overview-stat-grid reports-stat-grid">
+                <article class="overview-stat-card"><span class="overview-stat-icon is-indigo"><i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="materialTypes">Mã vật tư</span><strong id="reportMaterialCount">0</strong><small id="reportStockQuantity">Tồn kho: 0</small></article>
+                <article class="overview-stat-card"><span class="overview-stat-icon is-rose"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="materialsToRestock">Cần nhập thêm</span><strong id="reportShortageCount">0</strong><small data-i18n="purchaseListAndOutOfStock">Danh sách mua và hàng hết</small></article>
+                <article class="overview-stat-card"><span class="overview-stat-icon is-blue"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="projects">Dự án</span><strong id="reportProjectCount">0</strong><small id="reportProjectTasks">0 công việc</small></article>
+                <article class="overview-stat-card"><span class="overview-stat-icon is-emerald"><i class="fa-solid fa-microchip" aria-hidden="true"></i></span><span class="overview-stat-label" data-i18n="bomProducts">Sản phẩm BOM</span><strong id="reportProductCount">0</strong><small id="reportBomLineCount">0 dòng định mức</small></article>
+            </div>
+            <div class="reports-work-metrics overview-panel">
+                <div><span data-i18n="completedThisWeek">Hoàn thành trong tuần</span><strong id="workspaceReportDoneCount">0</strong></div>
+                <div><span data-i18n="scheduledThisWeek">Thời gian đã lên lịch tuần này</span><strong id="workspaceReportPlannedTime">0h</strong></div>
+                <div><span data-i18n="weeklyCompletion">Tỷ lệ hoàn thành tuần này</span><strong id="workspaceReportCompletion">0%</strong><div class="workspace-progress"><div id="workspaceReportProgressBar" class="workspace-progress-bar" style="width:0%"></div></div></div>
+                <p id="workspaceReportProgressLabel" class="hidden">0 / 0</p>
+            </div>
+            <section class="overview-panel">
+                <div class="overview-panel-heading"><div><span class="overview-section-icon is-rose"><i class="fa-solid fa-box-open" aria-hidden="true"></i></span><div><h3 data-i18n="materialStatus">Tình trạng vật tư</h3><p data-i18n="materialStatusSubtitle">Tồn kho và các mặt hàng cần bổ sung</p></div></div><span id="reportGeneratedAt" class="report-generated-at"></span></div>
+                <div class="table-scroll"><table class="overview-report-table"><thead><tr><th data-i18n="materialName">Tên vật tư</th><th data-i18n="warehouseProject">Kho / Dự án</th><th data-i18n="onHand">Tồn kho</th><th data-i18n="restockQuantity">Cần bổ sung</th><th data-i18n="status">Trạng thái</th></tr></thead><tbody id="reportMaterialsTable"></tbody></table></div>
+            </section>
+            <div class="overview-panel-grid">
+                <section class="overview-panel"><div class="overview-panel-heading"><div><span class="overview-section-icon is-blue"><i class="fa-solid fa-folder-tree" aria-hidden="true"></i></span><div><h3 data-i18n="projectProgress">Tiến độ dự án</h3><p data-i18n="projectProgressSubtitle">Số công việc và tiến độ hoàn thành</p></div></div></div><div id="reportProjectsList" class="overview-list"></div></section>
+                <section class="overview-panel"><div class="overview-panel-heading"><div><span class="overview-section-icon is-emerald"><i class="fa-solid fa-microchip" aria-hidden="true"></i></span><div><h3 data-i18n="productBOMStatus">Cấu hình sản phẩm BOM</h3><p data-i18n="productBOMSubtitle">Số lượng linh kiện trong từng định mức</p></div></div></div><div id="reportProductsList" class="overview-list"></div></section>
+            </div>
+        </section>
+
+        <!-- ================= TAB 11: HƯỚNG DẪN CÔNG VIỆC ================= -->
+        <section id="content-guide" class="tab-content hidden space-y-5">
+            <div class="reports-heading"><div><span class="overview-eyebrow" data-i18n="guideEyebrow">CẨM NANG QUY TRÌNH</span><h2 data-i18n="guideTitle">Hướng dẫn công việc</h2><p data-i18n="guideDescription">Làm theo từng bước để hoàn thiện dự án và sản phẩm, từ chuẩn bị đến nghiệm thu.</p></div></div>
+            <section class="overview-panel guide-library">
+                <div class="overview-panel-heading">
+                    <div><span class="overview-section-icon is-emerald"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span><div><h3>Nội dung hướng dẫn của nhóm</h3><p>Thêm quy trình, tài liệu sử dụng và cách xử lý lỗi. Nội dung chia sẻ với cả nhóm.</p></div></div>
+                    <button type="button" class="overview-secondary-button" onclick="openGuideContentEditor()"><i class="fi fi-rs-plus" aria-hidden="true"></i> Thêm nội dung</button>
+                </div>
+                <div id="sharedGuideContentList" class="guide-library-grid" aria-live="polite"></div>
+            </section>
+            <section class="guide-workflow overview-panel">
+                <div class="overview-panel-heading"><div><span class="overview-section-icon is-indigo"><i class="fa-solid fa-route" aria-hidden="true"></i></span><div><h3 data-i18n="projectWorkflow">Quy trình hoàn thiện dự án / sản phẩm</h3><p data-i18n="workflowSubtitle">Đánh dấu từng bước; tiến độ được lưu trên thiết bị này.</p></div></div><span id="guideProgressLabel" class="guide-progress-label">0 / 7</span></div>
+                <div class="workspace-progress guide-progress"><div id="guideProgressBar" class="workspace-progress-bar" style="width:0%"></div></div>
+                <ol id="guideWorkflowSteps" class="guide-steps"></ol>
+                <form id="guideAddStepForm" class="guide-add-step" onsubmit="addGuideStep(event)">
+                    <div><label for="guideStepTitle" data-i18n="addWorkflowStep">Thêm bước riêng cho quy trình</label><input id="guideStepTitle" type="text" maxlength="120" required placeholder="Ví dụ: Kiểm tra lần cuối" data-i18n-placeholder="guideStepPlaceholder"></div>
+                    <button type="submit" class="overview-secondary-button"><i class="fi fi-rs-plus" aria-hidden="true"></i><span data-i18n="addStep">Thêm bước</span></button>
+                </form>
+            </section>
+            <section class="overview-panel">
+                <div class="overview-panel-heading"><div><span class="overview-section-icon is-blue"><i class="fa-solid fa-book" aria-hidden="true"></i></span><div><h3 data-i18n="usingTheSystem">Hướng dẫn sử dụng</h3><p data-i18n="usingTheSystemSubtitle">Các thao tác thường dùng trong Naphutech Inventory.</p></div></div></div>
+                <div class="guide-manual-grid">
+                    <article class="guide-info-card"><span class="guide-card-number">01</span><h4 data-i18n="guideInventoryTitle">Quản lý vật tư</h4><p data-i18n="guideInventoryText">Tạo mới vật tư, khai báo đơn vị, số lượng, giá và kho dự án. Dùng bộ lọc để tìm nhanh; danh sách mua thể hiện các mặt hàng dự kiến cần bổ sung.</p></article>
+                    <article class="guide-info-card"><span class="guide-card-number">02</span><h4 data-i18n="guideBomTitle">Thiết lập định mức BOM</h4><p data-i18n="guideBomText">Tạo sản phẩm, thêm linh kiện và số lượng cần cho mỗi sản phẩm. Chạy dự toán để xác định số lượng cần xuất và phần còn thiếu.</p></article>
+                    <article class="guide-info-card"><span class="guide-card-number">03</span><h4 data-i18n="guideTransactionTitle">Lập phiếu xuất / nhập</h4><p data-i18n="guideTransactionText">Chọn kho, loại giao dịch, vật tư, số lượng và lý do; kiểm tra lại phiếu trước khi lưu. Nhật ký kho ghi nhận người thực hiện và thời điểm.</p></article>
+                    <article class="guide-info-card"><span class="guide-card-number">04</span><h4 data-i18n="guideProjectsTitle">Theo dõi dự án và lịch</h4><p data-i18n="guideProjectsText">Tạo dự án, chia thành công việc có thời hạn và mức ưu tiên. Lên lịch theo ngày, cập nhật số lượng hoàn thành để theo dõi tiến độ.</p></article>
+                </div>
+            </section>
+            <section class="overview-panel">
+                <div class="overview-panel-heading"><div><span class="overview-section-icon is-amber"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i></span><div><h3 data-i18n="troubleshooting">Lỗi thường gặp &amp; cách khắc phục</h3><p data-i18n="troubleshootingSubtitle">Kiểm tra các bước sau trước khi thao tác lại.</p></div></div></div>
+                <div class="guide-troubleshooting-list">
+                    <details class="guide-faq"><summary><span data-i18n="issueShortage">Dự toán báo thiếu vật tư dù kho vẫn có hàng</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><p data-i18n="fixShortage">Kiểm tra dự án được gán cho vật tư. Dự toán ưu tiên kho của dự án và kho dùng chung; vật tư thuộc dự án khác không được tự động tính vào.</p></details>
+                    <details class="guide-faq"><summary><span data-i18n="issueNoSchedule">Không thấy công việc trên lịch hôm nay</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><p data-i18n="fixNoSchedule">Kiểm tra ngày của lịch, dự án và công việc đã chọn. Mở Lịch để thêm công việc cho đúng ngày hoặc cập nhật khoảng thời gian công việc.</p></details>
+                    <details class="guide-faq"><summary><span data-i18n="issueSave">Không lưu được dữ liệu trên trình duyệt</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><p data-i18n="fixSave">Kiểm tra dung lượng lưu trữ của trình duyệt và không xóa dữ liệu trang nếu chưa sao lưu. Tải lại trang rồi thử lưu lại; nếu lỗi còn tiếp diễn, xuất báo cáo cần thiết và liên hệ quản trị viên.</p></details>
+                    <details class="guide-faq"><summary><span data-i18n="issueWrongStock">Số lượng tồn kho không như dự kiến</span><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><p data-i18n="fixWrongStock">Mở Lịch sử giao dịch để đối chiếu phiếu xuất / nhập gần đây, kho và số lượng từng dòng. Chỉ tạo giao dịch điều chỉnh sau khi đã xác minh phiếu gốc.</p></details>
+                </div>
+            </section>
+        </section>
+
+        <!-- ================= TAB 12: CÀI ĐẶT ================= -->
+        <section id="content-settings" class="tab-content hidden space-y-5">
+            <div class="reports-heading">
+                <div>
+                    <span class="overview-eyebrow" data-i18n="settingsEyebrow">TÙY CHỈNH KHÔNG GIAN LÀM VIỆC</span>
+                    <h2 data-i18n="settingsTitle">Cài đặt</h2>
+                    <p data-i18n="settingsDescription">Tùy chỉnh giao diện và chọn những cập nhật bạn muốn nhận.</p>
+                </div>
+            </div>
+            <section class="overview-panel settings-panel">
+                <div class="overview-panel-heading">
+                    <div>
+                        <span class="overview-section-icon is-blue"><i class="fa-solid fa-palette" aria-hidden="true"></i></span>
+                        <div><h3 data-i18n="appearanceSettings">Giao diện</h3><p data-i18n="appearanceSettingsSubtitle">Chọn chế độ hiển thị phù hợp với môi trường làm việc.</p></div>
+                    </div>
+                </div>
+                <div class="settings-theme-options">
+                    <button type="button" class="settings-theme-option" data-app-theme-option="dark" onclick="setAppTheme('dark')" aria-pressed="false">
+                        <span class="settings-theme-preview is-dark" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <span class="settings-theme-copy"><strong data-i18n="darkMode">Chế độ tối</strong><small data-i18n="darkModeDescription">Giao diện dịu mắt với nền xanh than và điểm nhấn xanh lam.</small></span>
+                        <i class="fa-solid fa-circle-check settings-theme-check" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="settings-theme-option" data-app-theme-option="light" onclick="setAppTheme('light')" aria-pressed="false">
+                        <span class="settings-theme-preview is-light" aria-hidden="true"><i></i><i></i><i></i></span>
+                        <span class="settings-theme-copy"><strong data-i18n="lightMode">Chế độ sáng</strong><small data-i18n="lightModeDescription">Giao diện sáng, rõ ràng cho môi trường nhiều ánh sáng.</small></span>
+                        <i class="fa-solid fa-circle-check settings-theme-check" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </section>
+            <section class="overview-panel settings-panel">
+                <div class="overview-panel-heading">
+                    <div>
+                        <span class="overview-section-icon is-amber"><i class="fa-regular fa-bell" aria-hidden="true"></i></span>
+                        <div><h3 data-i18n="notificationSettings">Thông báo</h3><p data-i18n="notificationSettingsSubtitle">Chọn nhóm cập nhật sẽ xuất hiện trong bảng thông báo.</p></div>
+                    </div>
+                </div>
+                <div class="settings-notification-list">
+                    <label class="settings-notification-option" for="settingLowStockNotifications">
+                        <span><strong data-i18n="lowStockNotifications">Vật tư cần bổ sung</strong><small data-i18n="lowStockNotificationsDescription">Báo vật tư hết hàng hoặc cần nhập thêm theo danh sách mua.</small></span>
+                        <input id="settingLowStockNotifications" type="checkbox" onchange="updateNotificationPreference('lowStock', this.checked)">
+                    </label>
+                    <label class="settings-notification-option" for="settingScheduleNotifications">
+                        <span><strong data-i18n="scheduleNotifications">Lịch trình hôm nay</strong><small data-i18n="scheduleNotificationsDescription">Báo các công việc đã được lên lịch trong ngày hôm nay.</small></span>
+                        <input id="settingScheduleNotifications" type="checkbox" onchange="updateNotificationPreference('schedule', this.checked)">
+                    </label>
+                </div>
+            </section>
+        </section>
+
+    </main>
+    </div>
+    </div>
+
+    <!-- ================= MODAL 1: THÊM / SỬA LINH KIỆN ================= -->
+    <div id="componentModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
+            <div class="px-6 pt-5 pb-3 flex justify-between items-center border-b border-slate-100">
+                <h3 id="componentModalTitle" class="text-lg font-bold text-slate-800">Thêm linh kiện mới</h3>
+                <button onclick="closeComponentModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-lg transition-colors">
+                    &times;
+                </button>
+            </div>
+
+            <form id="componentForm" onsubmit="handleSaveComponent(event)" class="p-6 space-y-3.5 text-xs">
+                <input type="hidden" id="compEditId" value="">
+
+                <div>
+                    <label class="block font-bold text-slate-500 uppercase mb-1">TÊN LINH KIỆN</label>
+                    <input type="text" id="compName" list="componentNameSuggestions" required placeholder="VD: Tụ hóa..." 
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="compType" class="block font-bold text-slate-500 uppercase mb-1">LOẠI VẬT TƯ</label>
+                        <select id="compType" required class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                            <option value="other">Linh kiện khác</option>
+                            <option value="passive">Linh kiện thụ động</option>
+                            <option value="sensor">Cảm biến</option>
+                            <option value="board">Mạch</option>
+                            <option value="chip">IC/Chip</option>
+                            <option value="tool">Dụng cụ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="compProjectName" class="block font-bold text-slate-500 uppercase mb-1">DỰ ÁN</label>
+                        <input type="text" id="compProjectName" list="inventoryProjectSuggestions" placeholder="Nhập tên dự án..."
+                            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-500 uppercase mb-1">ĐƠN VỊ TÍNH</label>
+                        <input type="text" id="compUnit" list="unitSuggestions" required placeholder="pcs, m, bộ..." 
+                            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-500 uppercase mb-1">SỐ LƯỢNG TỒN</label>
+                        <input type="number" id="compQty" min="0" value="0" required 
+                            class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-500 uppercase mb-1">HÌNH ÁNH (URL)</label>
+                    <input type="url" id="compImgUrl" placeholder="https://..." 
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-500 uppercase mb-1">ĐƠN GIÁ (VND)</label>
+                    <input type="text" id="compPrice" placeholder="VD: 1,500" oninput="formatInputCurrency(this)"
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-500 uppercase mb-1">CỬA HÀNG / LINK MUA</label>
+                    <input type="text" id="compSupplier" placeholder="Shopee, LCSC hoặc URL link..." 
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-500 uppercase mb-1">NGÀY MUA</label>
+                    <input type="date" id="compDate" required 
+                        class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-brand-500">
+                </div>
+
+                <div class="flex justify-end items-center gap-2.5 pt-3">
+                    <button type="button" onclick="closeComponentModal()" class="px-5 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200">
+                        Hủy
+                    </button>
+                    <button type="submit" class="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 shadow-md shadow-brand-500/30">
+                        Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 2: CẤU HÌNH BOM SẢN PHẨM ================= -->
+    <div id="bomModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 pt-5 pb-3 flex justify-between items-center border-b border-slate-100">
+                <h3 id="bomModalTitle" class="text-base font-bold text-slate-800">Cấu hình định mức linh kiện sản phẩm</h3>
+                <button onclick="closeBOMModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-lg">
+                    &times;
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                <input type="hidden" id="bomEditId" value="">
+                <div>
+                    <label class="block font-bold text-slate-500 uppercase mb-1">TÊN SẢN PHẨM / BO MẠCH</label>
+                    <input type="text" id="bomProductName" placeholder="VD: Mạch điều khiển ESP32..." required class="w-full p-2.5 border border-slate-200 rounded-xl">
+                </div>
+
+                <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-slate-600 uppercase">Cấu hình các linh kiện thành phần</span>
+                        <button type="button" onclick="addBOMRow()" class="text-brand-600 font-semibold hover:underline flex items-center gap-1">
+                            <i class="fi fi-rs-plus" aria-hidden="true"></i> Thêm Linh Kiện
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <input id="bomComponentSearch" type="search" oninput="filterBOMComponentOptions()" placeholder="Tìm linh kiện trong kho..." class="w-full p-2.5 border border-slate-200 rounded-xl">
+                        <select id="bomComponentCategory" onchange="filterBOMComponentOptions()" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                            <option value="all">Tất cả loại vật tư</option>
+                            <option value="passive">Linh kiện thụ động</option>
+                            <option value="sensor">Cảm biến</option>
+                            <option value="board">Mạch</option>
+                            <option value="chip">IC/Chip</option>
+                            <option value="other">Linh kiện khác</option>
+                            <option value="tool">Dụng cụ</option>
+                        </select>
+                    </div>
+                    <div id="bomItemsContainer" class="space-y-2">
+                        <!-- Dynamic BOM rows -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2.5 px-6 py-4 bg-slate-50 border-t border-slate-100">
+                <button type="button" onclick="closeBOMModal()" class="px-5 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100">Hủy</button>
+                <button type="button" onclick="saveBOMProduct()" class="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-brand-600">Lưu BOM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 4: CHỌN NHANH LINH KIỆN VÀO DS MUA ================= -->
+    <div id="selectToProcurementModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-100">
+            <div class="px-6 pt-5 pb-3 flex justify-between items-center border-b border-slate-100">
+                <h3 id="procurementPickerTitle" class="text-base font-bold text-slate-800">Chọn linh kiện từ Kho vào Danh sách mua</h3>
+                <button onclick="closeSelectFromInventoryModal()" class="text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center hover:bg-slate-100 text-lg">
+                    &times;
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+                <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                    <button id="procurementPickerComponentsTab" type="button" onclick="setProcurementPickerType('component')" class="px-3 py-2 rounded-lg text-xs font-semibold bg-white text-brand-700 shadow-sm transition">
+                        <i class="fa-solid fa-microchip mr-1"></i> Linh kiện
+                    </button>
+                    <button id="procurementPickerProductsTab" type="button" onclick="setProcurementPickerType('bom')" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-800 transition">
+                        <i class="fa-solid fa-cubes mr-1"></i> Sản phẩm BOM
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <input type="text" id="pickerSearchInput" oninput="renderPickerList()" placeholder="Tìm tên linh kiện trong kho..." class="w-full p-2.5 border border-slate-200 rounded-xl">
+                <div id="pickerCategoryFilterWrap">
+                    <select id="pickerCategoryFilter" onchange="renderPickerList()" class="w-full p-2.5 border border-slate-200 rounded-xl">
+                        <option value="all">Tất cả loại vật tư</option>
+                        <option value="passive">Linh kiện thụ động</option>
+                        <option value="sensor">Cảm biến</option>
+                        <option value="board">Mạch</option>
+                        <option value="chip">IC/Chip</option>
+                        <option value="other">Linh kiện khác</option>
+                        <option value="tool">Dụng cụ</option>
+                    </select>
+                </div>
+                </div>
+                
+                <div class="border border-slate-200 rounded-xl overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead id="procurementPickerTableHead" class="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase">
+                        </thead>
+                        <tbody id="pickerTableBody" class="divide-y divide-slate-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2.5 px-6 py-4 bg-slate-50 border-t border-slate-100">
+                <button type="button" onclick="closeSelectFromInventoryModal()" class="px-5 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100">Đóng</button>
+                <button type="button" onclick="confirmAddPickerToProcurement()" class="px-6 py-2 rounded-xl text-xs font-semibold text-white bg-brand-600"><i class="fi fi-rs-plus mr-1" aria-hidden="true"></i>Thêm Vào Danh Sách Mua</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL 3: XEM VÀ IN PHIẾU GIAO DỊCH ================= -->
+    <div id="transactionReceiptModal" class="fixed inset-0 z-[80] flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+            <div id="transactionReceiptPrintArea" class="receipt-print-area p-6 sm:p-10">
+                <div class="receipt-header">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Biên bản kho</p>
+                        <h2 id="receiptTitle" class="mt-2 text-2xl font-extrabold text-slate-900">Phiếu Xuất/Nhập Kho</h2>
+                    </div>
+                    <div class="text-right text-sm">
+                        <p class="font-semibold text-slate-600">Số phiếu</p>
+                        <p id="receiptNumber" class="mt-1 font-bold text-slate-900"></p>
+                        <p id="receiptDate" class="mt-1 text-slate-600"></p>
+                    </div>
+                </div>
+                <div class="receipt-info-grid mt-6">
+                    <p><strong>Người làm phiếu:</strong> <span id="receiptActor"></span></p>
+                    <p><strong>Dự án:</strong> <span id="receiptProject"></span></p>
+                    <p><strong>Xuất/Nhập từ kho:</strong> <span id="receiptWarehouse"></span></p>
+                    <p><strong>Địa điểm:</strong> <span id="receiptLocation"></span></p>
+                    <p class="sm:col-span-2"><strong>Lý do:</strong> <span id="receiptReason"></span></p>
+                </div>
+                <div class="mt-6 overflow-x-auto">
+                    <table class="w-full border-collapse text-left text-xs">
+                        <thead class="receipt-table-head">
+                            <tr>
+                                <th>STT</th><th>Ảnh</th><th>Vật tư</th><th>Loại</th><th>Dự án kho</th><th>ĐVT</th>
+                                <th class="text-right">Số lượng</th><th class="text-right">Đơn giá</th><th class="text-right">Thành tiền</th><th>Nguồn</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptItemsBody"></tbody>
+                    </table>
+                </div>
+                <div class="receipt-totals mt-5">
+                    <p>Tổng số mặt hàng: <strong id="receiptLineCount">0</strong></p>
+                    <p>Tổng số lượng: <strong id="receiptTotalQuantity">0</strong></p>
+                    <p class="text-base">Tổng tiền: <strong id="receiptTotalAmount">0 ₫</strong></p>
+                </div>
+                <div class="receipt-signatures mt-12">
+                    <div><strong>Người giao / nhận</strong><span>(Ký, ghi rõ họ tên)</span></div>
+                    <div><strong>Người làm phiếu</strong><span id="receiptSignatureActor"></span></div>
+                </div>
+            </div>
+            <div class="no-print flex justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-4">
+                <button type="button" onclick="closeTransactionReceipt()" class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">Đóng</button>
+                <button type="button" onclick="printTransactionReceipt()" class="rounded-lg bg-brand-600 px-4 py-2 text-xs font-semibold text-white"><i class="fa-solid fa-print mr-1"></i> In phiếu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: THÊM / SỬA DỰ ÁN VÀ CÔNG VIỆC ================= -->
+    <div id="workspaceProjectModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 id="workspaceProjectModalTitle" class="text-lg font-bold text-slate-800">Thêm Dự Án</h3>
+                    <p class="text-xs text-slate-500 mt-1">Cấu hình công việc để có thể lên lịch trong tab Lịch</p>
+                </div>
+                <button onclick="closeWorkspaceProjectEditor()" aria-label="Đóng" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+            </div>
+            <div class="p-5 overflow-auto space-y-4">
+                <input type="hidden" id="workspaceProjectId">
+                <div>
+                    <label for="workspaceProjectName" class="block text-xs font-semibold text-slate-600 mb-1">TÊN DỰ ÁN</label>
+                    <input id="workspaceProjectName" type="text" oninput="syncWorkspaceProjectName()" required placeholder="Nhập tên dự án" class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm">
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <h4 class="font-bold text-sm text-slate-800">Danh sách công việc</h4>
+                    <button type="button" onclick="addWorkspaceProjectTaskRow()" class="px-3 py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100"><i class="fi fi-rs-plus mr-1" aria-hidden="true"></i> Thêm Công Việc</button>
+                </div>
+                <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                    <table class="w-full min-w-[1320px] text-left text-xs">
+                        <thead class="bg-slate-50 text-slate-500 uppercase">
+                            <tr>
+                                <th class="p-3">Công việc</th>
+                                <th class="p-3">Dự án</th>
+                                <th class="p-3">Ghi chú</th>
+                                <th class="p-3">Mức độ cần thiết</th>
+                                <th class="p-3">Ngày bắt đầu</th>
+                                <th class="p-3">Ngày kết thúc</th>
+                                <th class="p-3">Số lượng cần làm</th>
+                                <th class="p-3">Người phụ trách</th>
+                                <th class="p-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="workspaceProjectTasksBody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button type="button" onclick="closeWorkspaceProjectEditor()" class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold">Hủy</button>
+                <button type="button" onclick="saveWorkspaceProject()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">Lưu Dự Án</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: LẬP KẾ HOẠCH CÔNG VIỆC TRONG NGÀY ================= -->
+    <div id="workspacePlanModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Lập Kế Hoạch Công Việc</h3>
+                    <p id="workspacePlanDateLabel" class="text-sm text-slate-500 mt-1"></p>
+                </div>
+                <button onclick="closeWorkspacePlanModal()" aria-label="Đóng" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+            </div>
+            <div class="p-5 overflow-y-auto space-y-4">
+                <div id="workspaceDayProgressRecords" class="space-y-3 rounded-xl border border-blue-100 bg-blue-50/60 p-4"></div>
+                <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                    <input id="workspacePlanProjectSearch" type="search" oninput="filterWorkspacePlanProjects()" placeholder="Tìm kiếm dự án..." class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm">
+                    <div class="flex gap-2">
+                        <select id="workspacePlanProjectSelect" class="min-w-0 px-3 py-2.5 border border-slate-200 rounded-lg text-sm"></select>
+                        <button type="button" onclick="addWorkspacePlanProject()" class="shrink-0 px-3 py-2.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700"><i class="fi fi-rs-plus mr-1" aria-hidden="true"></i>Thêm Dự Án</button>
+                    </div>
+                </div>
+                <p class="text-xs text-slate-500">Có thể đặt giờ riêng cho từng công việc trong ngày đang chọn.</p>
+                <div id="workspacePlanProjectsList" class="space-y-3"></div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button type="button" onclick="closeWorkspacePlanModal()" class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold">Hủy</button>
+                <button type="button" onclick="saveWorkspaceDayPlan()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">Lưu Kế Hoạch</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: CẬP NHẬT TIẾN ĐỘ CÔNG VIỆC ================= -->
+    <div id="workspaceTaskProgressModal" class="fixed inset-0 z-[70] flex items-center justify-center p-4 modal-backdrop hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 id="workspaceTaskProgressModalTitle" class="text-base font-bold text-slate-800">Cập nhật tiến độ công việc</h3>
+                    <p id="workspaceProgressTaskTitle" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <button type="button" onclick="closeWorkspaceTaskProgressModal()" aria-label="Đóng" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label for="workspaceProgressQuantity" class="block text-xs font-semibold text-slate-600 mb-1">SỐ LƯỢNG ĐÃ LÀM</label>
+                    <input id="workspaceProgressQuantity" type="number" min="0" step="1" required class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm">
+                    <p id="workspaceProgressQuantityLabel" class="text-xs text-slate-500 mt-1"></p>
+                </div>
+                <div>
+                    <label for="workspaceProgressNote" class="block text-xs font-semibold text-slate-600 mb-1">GHI CHÚ</label>
+                    <textarea id="workspaceProgressNote" rows="3" placeholder="Thêm chú thích cho lần cập nhật này..." class="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm resize-y"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                <button type="button" onclick="closeWorkspaceTaskProgressModal()" class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold">Hủy</button>
+                <button type="button" onclick="saveWorkspaceTaskProgress()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">Lưu tiến độ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: THÊM / SỬA NỘI DUNG HƯỚNG DẪN ================= -->
+    <div id="guideContentEditorModal" class="fixed inset-0 z-[75] flex items-center justify-center p-4 modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="guideContentEditorTitle">
+        <form id="guideContentEditorForm" class="workspace-editor-modal guide-editor-modal" onsubmit="saveGuideContent(event)">
+            <header class="workspace-editor-header"><div><span class="workspace-editor-icon is-guide"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span><div><h2 id="guideContentEditorTitle">Thêm nội dung hướng dẫn</h2><p>Chia sẻ kiến thức để cả nhóm cùng tham khảo.</p></div></div><button type="button" class="notion-icon-action" onclick="closeWorkspaceEditor('guideContentEditorModal')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></header>
+            <div class="workspace-editor-fields">
+                <input id="guideContentId" type="hidden">
+                <label class="workspace-field"><span>Tiêu đề <b>*</b></span><input id="guideContentTitle" maxlength="160" required placeholder="Ví dụ: Quy trình kiểm tra bo mạch"></label>
+                <div class="workspace-field-grid">
+                    <label class="workspace-field"><span>Loại nội dung</span><select id="guideContentCategory"><option value="workflow">Quy trình công việc</option><option value="manual">Hướng dẫn sử dụng</option><option value="troubleshooting">Lỗi &amp; cách khắc phục</option></select></label>
+                    <label class="workspace-field"><span>Mô tả ngắn</span><input id="guideContentSummary" maxlength="300" placeholder="Tóm tắt nội dung trong một câu"></label>
+                </div>
+                <label class="workspace-field"><span>Nội dung chi tiết <b>*</b></span><textarea id="guideContentBody" rows="9" maxlength="12000" required placeholder="Viết các bước, lưu ý hoặc cách khắc phục tại đây..."></textarea><small>Hỗ trợ văn bản nhiều dòng; xuống dòng để phân tách các bước.</small></label>
+            </div>
+            <footer class="workspace-editor-footer"><button type="button" class="overview-secondary-button" onclick="closeWorkspaceEditor('guideContentEditorModal')">Hủy</button><button type="submit" class="overview-primary-button"><i class="fa-solid fa-cloud-arrow-up"></i> Lưu nội dung</button></footer>
+        </form>
+    </div>
+
+    <!-- ================= MODAL: THÊM / SỬA CÔNG VIỆC NHÓM ================= -->
+    <div id="todoEditorModal" class="fixed inset-0 z-[75] flex items-center justify-center p-4 modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="todoEditorTitle">
+        <form id="todoEditorForm" class="workspace-editor-modal" onsubmit="saveTodo(event)">
+            <header class="workspace-editor-header"><div><span class="workspace-editor-icon is-task"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><div><h2 id="todoEditorTitle">Thêm công việc</h2><p>Cập nhật công việc chung cho không gian nhóm.</p></div></div><button type="button" class="notion-icon-action" onclick="closeWorkspaceEditor('todoEditorModal')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></header>
+            <div class="workspace-editor-fields">
+                <input id="todoId" type="hidden">
+                <label class="workspace-field"><span>Tên công việc <b>*</b></span><input id="todoTitle" maxlength="180" required placeholder="Việc cần hoàn thành"></label>
+                <label class="workspace-field"><span>Mô tả / ghi chú</span><textarea id="todoDescription" rows="4" maxlength="4000" placeholder="Thêm bối cảnh, checklist hoặc liên kết liên quan..."></textarea></label>
+                <div class="workspace-field-grid workspace-field-grid-three">
+                    <label class="workspace-field"><span>Trạng thái</span><select id="todoStatus"><option value="todo">Chưa làm</option><option value="doing">Đang làm</option><option value="done">Hoàn tất</option></select></label>
+                    <label class="workspace-field"><span>Ưu tiên</span><select id="todoPriority"><option value="low">Thấp</option><option value="medium">Bình thường</option><option value="high">Cao</option></select></label>
+                    <label class="workspace-field"><span>Hạn hoàn thành</span><input id="todoDueDate" type="date"></label>
+                </div>
+                <section class="workspace-field todo-assignee-field">
+                    <span data-i18n="assignees">Người phụ trách</span>
+                    <div class="todo-assignee-entry">
+                        <input id="todoAssigneeInput" type="text" maxlength="80" placeholder="Nhập tên thành viên" data-i18n-placeholder="enterTeamMember" onkeydown="if(event.key==='Enter'){event.preventDefault();addTodoAssigneeFromInput();}">
+                        <button type="button" class="overview-secondary-button" onclick="addTodoAssigneeFromInput()"><i class="fi fi-rs-plus" aria-hidden="true"></i> <span data-i18n="addPerson">Thêm người</span></button>
+                    </div>
+                    <small data-i18n="selectTaskAssignees">Chọn một hoặc nhiều người; có thể thêm thành viên mới bất cứ lúc nào.</small>
+                    <div id="todoAssigneeDirectory" class="todo-assignee-directory" aria-label="Danh sách người phụ trách"></div>
+                </section>
+                <label class="workspace-field"><span>Nhãn</span><input id="todoTags" maxlength="120" placeholder="Ví dụ: Sản phẩm A, Phần cứng"></label>
+            </div>
+            <footer class="workspace-editor-footer"><button type="button" class="overview-secondary-button" onclick="closeWorkspaceEditor('todoEditorModal')">Hủy</button><button type="submit" class="overview-primary-button"><i class="fa-solid fa-cloud-arrow-up"></i> Lưu công việc</button></footer>
+        </form>
+    </div>
+
+    <!-- ================= MODAL: THÊM / SỬA GHI CHÚ NHÓM ================= -->
+    <div id="noteEditorModal" class="fixed inset-0 z-[75] flex items-center justify-center p-4 modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="noteEditorTitle">
+        <form id="noteEditorForm" class="workspace-editor-modal note-editor-modal" onsubmit="saveNote(event)">
+            <header class="workspace-editor-header"><div><span class="workspace-editor-icon is-note"><i class="fa-regular fa-note-sticky" aria-hidden="true"></i></span><div><h2 id="noteEditorTitle">Tạo ghi chú</h2><p>Một trang ghi chú được lưu và chia sẻ với nhóm.</p></div></div><button type="button" class="notion-icon-action" onclick="closeWorkspaceEditor('noteEditorModal')" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></header>
+            <div class="workspace-editor-fields">
+                <input id="noteId" type="hidden">
+                <label class="workspace-field"><span>Tên trang <b>*</b></span><input id="noteTitle" maxlength="180" required placeholder="Ví dụ: Ý tưởng cải tiến sản phẩm"></label>
+                <label class="workspace-field"><span>Nội dung</span><textarea id="noteContent" rows="12" maxlength="12000" placeholder="Bắt đầu ghi chú..."></textarea><small>Dùng dòng trống để chia đoạn; ghi chú được lưu trên trình duyệt này.</small></label>
+                <label class="workspace-field"><span>Màu trang</span><select id="noteColor"><option value="plain">Mặc định</option><option value="teal">Xanh ngọc</option><option value="amber">Hổ phách</option><option value="violet">Tím</option></select></label>
+            </div>
+            <footer class="workspace-editor-footer"><button type="button" class="overview-secondary-button" onclick="closeWorkspaceEditor('noteEditorModal')">Hủy</button><button type="submit" class="overview-primary-button"><i class="fa-solid fa-cloud-arrow-up"></i> Lưu ghi chú</button></footer>
+        </form>
+    </div>
+
+    <!-- ================= MODAL: NHẬP DANH SÁCH VẬT TƯ ================= -->
+    <div id="inventoryImportModal" class="fixed inset-0 z-[75] flex items-center justify-center p-4 modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="inventoryImportTitle">
+        <section class="workspace-editor-modal inventory-import-modal">
+            <header class="workspace-editor-header">
+                <div><span class="workspace-editor-icon is-import"><i class="fa-solid fa-file-import" aria-hidden="true"></i></span><div><h2 id="inventoryImportTitle">Nhập vật tư từ Google Sheets</h2><p id="inventoryImportFileName">Xem trước dữ liệu trước khi thêm vào kho.</p></div></div>
+                <button type="button" class="notion-icon-action" onclick="closeInventoryImportModal()" aria-label="Đóng"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </header>
+            <div class="workspace-editor-fields">
+                <div class="inventory-import-instructions">
+                    <strong><i class="fa-regular fa-circle-question" aria-hidden="true"></i> Chuẩn bị bảng tính</strong>
+                    <p>Trong Google Sheets, chọn <b>Tệp → Tải xuống</b> và lưu thành Excel (.xlsx) hoặc CSV. Hàng đầu tiên cần có cột <b>Tên vật tư</b> và <b>Tồn kho</b>.</p>
+                    <small>Các cột tùy chọn: Loại, Đơn vị, Đơn giá, Link mua, Cửa hàng/Nhà cung cấp, Ngày nhập, Dự án, Hình ảnh. Vật tư trùng tên, nhóm, đơn vị và dự án sẽ được bỏ qua để không ghi đè tồn kho. Đọc tệp XLSX cần kết nối internet; CSV được đọc trực tiếp.</small>
+                </div>
+                <label class="inventory-import-image-option">
+                    <input id="inventoryImportFindImages" type="checkbox" checked>
+                    <span><strong>Tự tìm ảnh sản phẩm từ Link mua</strong><small>Nếu vật tư chưa có ảnh trong Sheet, ứng dụng sẽ gửi link sản phẩm tới <a href="https://microlink.io" target="_blank" rel="noopener">Microlink</a> để đọc ảnh Open Graph. Mỗi link sản phẩm được chia sẻ với dịch vụ này.</small></span>
+                </label>
+                <div id="inventoryImportSummary" class="inventory-import-summary" aria-live="polite"></div>
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="inventory-import-preview">
+                        <thead><tr><th>Ảnh</th><th>Tên vật tư</th><th>Loại</th><th>Tồn kho</th><th>Đơn vị</th><th>Đơn giá</th><th>Link mua / nguồn</th><th>Dự án</th></tr></thead>
+                        <tbody id="inventoryImportPreviewRows"><tr><td colspan="8">Chọn bảng tính để xem trước dữ liệu.</td></tr></tbody>
+                    </table>
+                </div>
+                <p id="inventoryImportErrors" class="inventory-import-errors hidden"></p>
+            </div>
+            <footer class="workspace-editor-footer">
+                <button type="button" class="overview-secondary-button" onclick="closeInventoryImportModal()">Hủy</button>
+                <button id="inventoryImportConfirm" type="button" class="overview-primary-button" onclick="importInventoryRows()" disabled><i class="fa-solid fa-file-import" aria-hidden="true"></i> Nhập vật tư</button>
+            </footer>
+        </section>
+    </div>
+
+    </div>
+
+    <!-- Custom Script File -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

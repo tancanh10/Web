@@ -1,0 +1,9 @@
+# Thư viện Node.js đã cài đặt cục bộ.
+node_modules/
+
+# Cơ sở dữ liệu và dữ liệu runtime do máy chủ tạo.
+data/
+
+# Thư mục website được sinh cho Netlify và cấu hình Supabase runtime.
+dist/
+supabase-config.js

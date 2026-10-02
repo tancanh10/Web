@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus Enterprise - Nền Tảng Quản Trị Doanh Nghiệp Toàn Diện</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Khai báo màu nền, thẻ nội dung và màu thương hiệu của giao diện. -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            darkbg: '#090d16',
+            cardbg: '#111827',
+            bordercol: '#1f293d',
+            brand: { 500: '#6366f1', 600: '#4f46e5' }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Alpine.js & Lucide Icons -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-darkbg text-slate-200 font-sans h-screen flex overflow-hidden selection:bg-brand-500 selection:text-white" x-data="enterpriseApp()">
+
+  <!-- SIDEBAR -->
+  <aside :class="sidebarOpen ? 'w-72' : 'w-20'" class="bg-cardbg border-r border-bordercol transition-all duration-300 flex flex-col z-20 shrink-0">
+    <div class="h-20 flex items-center justify-between px-6 border-b border-bordercol">
+      <div class="flex items-center gap-3 overflow-hidden">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-500 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-brand-500/25 shrink-0">N</div>
+        <div x-show="sidebarOpen" class="whitespace-nowrap">
+          <h1 class="font-bold text-white tracking-wide text-base">NEXUS CORP</h1>
+          <p class="text-[11px] text-slate-400 font-medium tracking-wider uppercase">Enterprise Suite</p>
+        </div>
+      </div>
+      <button @click="sidebarOpen = !sidebarOpen" class="p-2 hover:bg-slate-800/80 rounded-xl text-slate-400 hover:text-white transition">
+        <i data-lucide="chevron-left" :class="sidebarOpen ? '' : 'rotate-180'" class="w-5 h-5 transition-transform"></i>
+      </button>
+    </div>
+
+    <!-- Danh sách tab điều hướng được kết xuất theo trạng thái Alpine. -->
+    <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto">
+      <template x-for="tab in tabs" :key="tab.id">
+        <button 
+          @click="activeTab = tab.id; $nextTick(() => lucide.createIcons())"
+          :class="activeTab === tab.id ? 'bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-lg shadow-brand-600/20 font-semibold' : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'"
+          class="w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm transition-all group"
+        >
+          <i :data-lucide="tab.icon" class="w-5 h-5 shrink-0"></i>
+          <span x-show="sidebarOpen" x-text="tab.label" class="truncate"></span>
+        </button>
+      </template>
+    </nav>
+
+    <!-- Thẻ nhận diện và trạng thái tài khoản ở cuối sidebar. -->
+    <div class="p-4 border-t border-bordercol">
+      <div class="flex items-center gap-3 p-2 bg-slate-900/60 rounded-xl border border-slate-800/80">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 font-semibold flex items-center justify-center shrink-0 border border-emerald-500/20">AD</div>
+        <div x-show="sidebarOpen" class="overflow-hidden">
+          <p class="text-sm font-semibold text-white truncate">Alexander Vo</p>
+          <p class="text-xs text-emerald-400 flex items-center gap-1 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Hoạt động</p>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <!-- TOP HEADER -->
+    <header class="h-20 bg-cardbg/80 backdrop-blur-md border-b border-bordercol px-8 flex items-center justify-between z-10 shrink-0">
+      <!-- Khu vực tìm kiếm cùng các lối tắt giao dịch và thông báo. -->
+      <div class="flex items-center gap-4 flex-1 max-w-lg">
+        <div class="relative w-full">
+          <i data-lucide="search" class="absolute left-4 top-3 w-4 h-4 text-slate-400"></i>
+          <input type="text" placeholder="Tìm kiếm mã vật tư, lệnh sản xuất, hồ sơ dự án..." class="w-full bg-slate-900/90 border border-bordercol rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition shadow-inner">
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <button @click="triggerQuickModal = true" class="flex items-center gap-2.5 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-brand-600/25 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i> Giao Dịch Nhanh
+        </button>
+        <button class="p-2.5 bg-slate-900 border border-bordercol hover:bg-slate-800 rounded-xl text-slate-300 relative transition">
+          <i data-lucide="bell" class="w-5 h-5"></i>
+          <span class="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full"></span>
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENT VIEWS CONTAINER -->
+    <main class="flex-1 overflow-y-auto p-8 space-y-8">
+
+      <!-- 1. BENTO OVERVIEW DASHBOARD -->
+      <div x-show="activeTab === 'overview'" class="space-y-8">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Bảng Điều Hành Doanh Nghiệp</h2>
+            <p class="text-sm text-slate-400 mt-1">Hệ thống giám sát tồn kho và hiệu suất vận hành thời gian thực</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-2">
+              <span class="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span> Đồng bộ Realtime
+            </span>
+          </div>
+        </div>
+
+        <!-- Bento Grid Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-brand-500/50 transition">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Tổng Vốn Hóa Kho</span>
+              <div class="p-3 bg-brand-500/10 text-brand-400 rounded-xl border border-brand-500/20"><i data-lucide="wallet" class="w-5 h-5"></i></div>
+            </div>
+            <div class="mt-4"><span class="text-3xl font-extrabold text-white">2.45 Tỷ</span><span class="text-xs text-emerald-400 ml-2 font-semibold">+4.2%</span></div>
+            <p class="text-xs text-slate-500 mt-2">So với định mức tháng trước</p>
+          </div>
+
+          <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-brand-500/50 transition">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Danh Mục Vật Tư</span>
+              <div class="p-3 bg-blue-500/10 text-blue-400 rounded-xl border border-blue-500/20"><i data-lucide="box" class="w-5 h-5"></i></div>
+            </div>
+            <div class="mt-4"><span class="text-3xl font-extrabold text-white" x-text="materials.length + ' SKU'"></span></div>
+            <p class="text-xs text-slate-500 mt-2">Đang lưu trữ tại 3 kho trung tâm</p>
+          </div>
+
+          <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-brand-500/50 transition">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Dự Án Đang Thi Công</span>
+              <div class="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20"><i data-lucide="activity" class="w-5 h-5"></i></div>
+            </div>
+            <div class="mt-4"><span class="text-3xl font-extrabold text-white">8 Dự Án</span></div>
+            <p class="text-xs text-slate-500 mt-2">Cơ điện & Lắp ráp nhà xưởng</p>
+          </div>
+
+          <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl relative overflow-hidden group border-amber-500/30">
+            <div class="flex justify-between items-start">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-400/90">Cần Bổ Sung Gấp</span>
+              <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20"><i data-lucide="alert-octagon" class="w-5 h-5"></i></div>
+            </div>
+            <div class="mt-4"><span class="text-3xl font-extrabold text-amber-400" x-text="materials.filter(m => m.status === 'LOW_STOCK').length"></span></div>
+            <p class="text-xs text-slate-500 mt-2">Dưới định mức an toàn kho</p>
+          </div>
+        </div>
+
+        <!-- Recent Audit Log Stream -->
+        <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="history" class="w-5 h-5 text-brand-400"></i> Nhật Ký Hoạt Động (Audit Trail)</h3>
+            <span class="text-xs text-slate-400">Cập nhật tự động hệ thống</span>
+          </div>
+          <div class="space-y-4">
+            <template x-for="log in auditLogs">
+              <div class="flex items-center justify-between p-3.5 bg-slate-900/60 rounded-xl border border-slate-800/80">
+                <div class="flex items-center gap-4">
+                  <span class="text-xs font-mono font-medium text-brand-400 bg-brand-500/10 px-2.5 py-1 rounded-lg border border-brand-500/20" x-text="log.time"></span>
+                  <div>
+                    <p class="text-sm text-slate-200 font-medium" x-text="log.action"></p>
+                    <p class="text-xs text-slate-400 mt-0.5" x-text="'Thực hiện bởi: ' + log.user"></p>
+                  </div>
+                </div>
+                <span class="text-xs font-semibold uppercase tracking-wider bg-slate-800 text-slate-300 px-3 py-1 rounded-lg border border-slate-700" x-text="log.module"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. WAREHOUSE MANAGEMENT VIEW -->
+      <div x-show="activeTab === 'warehouse'" class="space-y-6">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">Quản Lý Kho Trung Tâm</h2>
+            <p class="text-sm text-slate-400 mt-1">Kiểm soát vật tư, định mức tồn kho và mã SKU chuẩn quốc tế</p>
+          </div>
+          <button @click="triggerQuickModal = true" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow transition">
+            + Lập Phiếu Xuất/Nhập Kho
+          </button>
+        </div>
+
+        <div class="bg-cardbg border border-bordercol rounded-2xl overflow-hidden shadow-xl">
+          <!-- Bảng danh mục hiển thị vị trí, số lượng, giá và mức an toàn. -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-900/90 text-slate-400 uppercase text-xs tracking-wider border-b border-bordercol">
+                <tr>
+                  <th class="p-4 font-semibold">Mã SKU</th>
+                  <th class="p-4 font-semibold">Tên Vật Tư</th>
+                  <th class="p-4 font-semibold">Vị Trí Lưu Kho</th>
+                  <th class="p-4 font-semibold">Tồn Kho</th>
+                  <th class="p-4 font-semibold">Đơn Giá (VNĐ)</th>
+                  <th class="p-4 font-semibold">Trạng Thái An Toàn</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-bordercol">
+                <template x-for="mat in materials">
+                  <tr class="hover:bg-slate-800/30 transition">
+                    <td class="p-4 font-mono font-bold text-brand-400" x-text="mat.code"></td>
+                    <td class="p-4 font-medium text-white" x-text="mat.name"></td>
+                    <td class="p-4 text-slate-400" x-text="mat.location"></td>
+                    <td class="p-4 font-bold text-white" x-text="mat.quantity + ' ' + mat.unit"></td>
+                    <td class="p-4 text-slate-300" x-text="mat.unitPrice.toLocaleString() + ' đ'"></td>
+                    <td class="p-4">
+                      <span :class="mat.status === 'LOW_STOCK' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'" class="px-3 py-1 rounded-full text-xs font-semibold border inline-flex items-center gap-1.5">
+                        <span :class="mat.status === 'LOW_STOCK' ? 'bg-amber-400' : 'bg-emerald-400'" class="w-1.5 h-1.5 rounded-full"></span>
+                        <span x-text="mat.status === 'LOW_STOCK' ? 'Cần nhập gấp' : 'An toàn'"></span>
+                      </span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. PROJECTS & SMART BOM CHECKER -->
+      <div x-show="activeTab === 'projects'" class="space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Điều Hành Dự Án & Smart BOM</h2>
+          <p class="text-sm text-slate-400 mt-1">Đối soát định mức vật tư tự động giữa bản vẽ kỹ thuật và tồn kho thực tế</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-mono bg-brand-500/10 text-brand-400 px-2.5 py-1 rounded-lg border border-brand-500/20">PRJ-2026-01</span>
+                <h3 class="text-lg font-bold text-white mt-2">Nhà Máy Năng Lượng Xanh Bình Định</h3>
+              </div>
+              <span class="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">Đang thi công</span>
+            </div>
+            <p class="text-sm text-slate-400">Lắp đặt hệ thống tủ điện trung thế & cáp động lực chính.</p>
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs text-slate-400 font-semibold">
+                <span>Tiến độ tổng thể</span>
+                <span>45%</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                <div class="bg-gradient-to-r from-brand-600 to-emerald-500 h-2.5 rounded-full w-[45%]"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+            <div>
+              <h3 class="text-lg font-bold text-white">Smart BOM Auto-Validation</h3>
+              <p class="text-sm text-slate-400 mt-1">Kiểm tra tức thì khả năng cung ứng của kho cho vật tư hạng mục này.</p>
+            </div>
+            <button @click="runBOMCheck()" class="mt-6 w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2">
+              <i data-lucide="cpu" class="w-4 h-4"></i> Chạy Đối Soát Kho Thời Gian Thực
+            </button>
+          </div>
+        </div>
+
+        <div x-show="bomResultShow" class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl space-y-4">
+          <!-- So sánh nhu cầu thiết kế với số lượng vật tư còn trong kho. -->
+          <h4 class="text-md font-bold text-white flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i> Kết Quả Phân Tích BOM:</h4>
+          <div class="space-y-3">
+            <div class="p-4 bg-slate-900/80 rounded-xl flex justify-between items-center border border-emerald-500/30">
+              <div>
+                <p class="text-sm font-semibold text-white">Cáp Đồng Lực Cadivi 4x50mm2</p>
+                <p class="text-xs text-slate-400">Yêu cầu thiết kế: 100 Mét</p>
+              </div>
+              <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">Đủ tồn kho (Còn 150 M)</span>
+            </div>
+            <div class="p-4 bg-slate-900/80 rounded-xl flex justify-between items-center border border-emerald-500/30">
+              <div>
+                <p class="text-sm font-semibold text-white">Bu-lông cường độ cao M16x80</p>
+                <p class="text-xs text-slate-400">Yêu cầu thiết kế: 500 Cái</p>
+              </div>
+              <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">Đủ tồn kho (Còn 2,500 Cái)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. KNOWLEDGE BASE VIEW -->
+      <div x-show="activeTab === 'knowledge'" class="space-y-6">
+        <div>
+          <h2 class="text-2xl font-bold tracking-tight text-white">Sổ Tay Kỹ Thuật & Xử Lý Sự Cố (KB)</h2>
+          <p class="text-sm text-slate-400 mt-1">Cơ sở dữ liệu chuẩn hóa các mã lỗi kỹ thuật và phương án khắc phục nhanh</p>
+        </div>
+
+        <div class="bg-cardbg border border-bordercol rounded-2xl p-6 shadow-xl space-y-4">
+          <!-- Mỗi thẻ sự cố gom mã lỗi, triệu chứng, nguyên nhân và giải pháp. -->
+          <div class="border border-bordercol rounded-xl p-5 bg-slate-900/60">
+            <div class="flex justify-between items-center mb-3">
+              <span class="text-sm font-mono text-amber-400 font-bold bg-amber-500/10 px-3 py-1 rounded-lg border border-amber-500/20">[ERR-INV-502] Quá tải dòng biến tần Inverter</span>
+              <span class="text-xs font-semibold uppercase bg-rose-500/10 text-rose-400 px-3 py-1 rounded-lg border border-rose-500/20">Mức độ: Quan trọng</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 text-sm">
+              <div class="p-3 bg-slate-950 rounded-xl border border-bordercol">
+                <p class="text-xs font-bold text-slate-400 uppercase">Triệu chứng</p>
+                <p class="text-slate-200 mt-1">Biến tần ngắt đột ngột khi tải vận hành vượt ngưỡng 80%.</p>
+              </div>
+              <div class="p-3 bg-slate-950 rounded-xl border border-bordercol">
+                <p class="text-xs font-bold text-slate-400 uppercase">Nguyên nhân</p>
+                <p class="text-slate-200 mt-1">Quá nhiệt hệ thống tản nhiệt hoặc suy hao điện trở cuộn kháng.</p>
+              </div>
+              <div class="p-3 bg-slate-950 rounded-xl border border-bordercol">
+                <p class="text-xs font-bold text-emerald-400 uppercase">Giải pháp xử lý</p>
+                <p class="text-slate-200 mt-1">1. Kiểm tra quạt tản nhiệt. 2. Đo điện trở cách điện. 3. Reset dòng định mức.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- TRANSACTION MODAL -->
+  <div x-show="triggerQuickModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-cardbg border border-bordercol rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5">
+      <div class="flex justify-between items-center pb-2 border-b border-bordercol">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2"><i data-lucide="file-text" class="w-5 h-5 text-brand-400"></i> Lập Phiếu Giao Dịch Kho (ACID)</h3>
+        <button @click="triggerQuickModal = false" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="space-y-4">
+        <!-- Các trường giao dịch được ràng buộc trực tiếp với trạng thái Alpine. -->
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase">Loại giao dịch</label>
+          <select x-model="txType" class="w-full bg-slate-900 border border-bordercol rounded-xl p-3 text-sm text-white mt-1.5 focus:outline-none focus:border-brand-500">
+            <option value="IMPORT">Nhập Kho (IMPORT)</option>
+            <option value="EXPORT">Xuất Kho (EXPORT - Kiểm tra tồn thực tế)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase">Chọn vật tư SKU</label>
+          <select x-model="selectedMaterialId" class="w-full bg-slate-900 border border-bordercol rounded-xl p-3 text-sm text-white mt-1.5 focus:outline-none focus:border-brand-500">
+            <template x-for="mat in materials">
+              <option :value="mat.id" x-text="mat.name + ' (Tồn hiện tại: ' + mat.quantity + ' ' + mat.unit + ')'"></option>
+            </template>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-400 uppercase">Số lượng giao dịch</label>
+          <input type="number" x-model.number="txQty" class="w-full bg-slate-900 border border-bordercol rounded-xl p-3 text-sm text-white mt-1.5 focus:outline-none focus:border-brand-500" placeholder="Nhập số lượng...">
+        </div>
+
+        <!-- Alert Boxes -->
+        <div x-show="errorMessage" class="p-3.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-medium rounded-xl flex items-center gap-2" x-text="errorMessage"></div>
+        <div x-show="successMessage" class="p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium rounded-xl flex items-center gap-2" x-text="successMessage"></div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-3 border-t border-bordercol">
+        <button @click="triggerQuickModal = false" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-sm font-semibold rounded-xl text-slate-300 transition">Đóng</button>
+        <button @click="executeTransaction()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 text-sm font-semibold rounded-xl text-white transition shadow-lg shadow-brand-600/20">Xác Nhận Giao Dịch</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Khai báo trạng thái, tab điều hướng và dữ liệu mẫu cho từng khu vực.
+    function enterpriseApp() {
+      return {
+        sidebarOpen: true,
+        activeTab: 'overview',
+        triggerQuickModal: false,
+        bomResultShow: false,
+        txType: 'IMPORT',
+        selectedMaterialId: '1',
+        txQty: 10,
+        errorMessage: '',
+        successMessage: '',
+        tabs: [
+          { id: 'overview', label: 'Tổng Quan Doanh Nghiệp', icon: 'layout-dashboard' },
+          { id: 'warehouse', label: 'Quản Lý Kho Xưởng', icon: 'boxes' },
+          { id: 'projects', label: 'Điều Hành Dự Án & BOM', icon: 'kanban' },
+          { id: 'knowledge', label: 'Sổ Tay Kỹ Thuật (KB)', icon: 'book-open-check' }
+        ],
+        materials: [
+          { id: '1', code: 'MAT-EL-001', name: 'Cáp Đồng Lực Cadivi 4x50mm2', location: 'Kho Tổng A1-02', quantity: 150, minQuantity: 200, unit: 'Mét', unitPrice: 125000, status: 'LOW_STOCK' },
+          { id: '2', code: 'MAT-ME-002', name: 'Bu-lông cường độ cao M16x80', location: 'Kho Phụ Tùng B2-05', quantity: 2500, minQuantity: 500, unit: 'Cái', unitPrice: 8500, status: 'IN_STOCK' }
+        ],
+        auditLogs: [
+          { time: '14:20', user: 'Alexander Vo', action: 'Xuất kho cáp đồng lực cho trạm biến áp', module: 'WAREHOUSE' },
+          { time: '13:45', user: 'Sophia Tran', action: 'Nhập kho 500 Bu-lông cường độ cao M16', module: 'WAREHOUSE' },
+          { time: '11:10', user: 'David Nguyen', action: 'Cập nhật mốc tiến độ dự án Solar Farm', module: 'PROJECT' }
+        ],
+        // Hiện kết quả đối soát BOM và xử lý nghiệp vụ giao dịch kho.
+        runBOMCheck() {
+          this.bomResultShow = true;
+          this.$nextTick(() => lucide.createIcons());
+        },
+        executeTransaction() {
+          this.errorMessage = '';
+          this.successMessage = '';
+          const mat = this.materials.find(m => m.id === this.selectedMaterialId);
+          if (!mat) return;
+
+          if (this.txQty <= 0) {
+            this.errorMessage = 'Vui lòng nhập số lượng hợp lệ lớn hơn 0.';
+            return;
+          }
+
+          if (this.txType === 'EXPORT') {
+            if (mat.quantity < this.txQty) {
+              this.errorMessage = `Lỗi kiểm soát: Tồn kho không đủ! Hiện tại chỉ còn ${mat.quantity} ${mat.unit}.`;
+              return;
+            }
+            mat.quantity -= this.txQty;
+          } else {
+            mat.quantity += this.txQty;
+          }
+
+          mat.status = mat.quantity <= mat.minQuantity ? 'LOW_STOCK' : 'IN_STOCK';
+          this.successMessage = 'Giao dịch thành công! Đã ghi vết Audit Trail và cập nhật kho thực tế.';
+
+          this.auditLogs.unshift({
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            user: 'Alexander Vo',
+            action: `${this.txType === 'IMPORT' ? 'Nhập' : 'Xuất'} ${this.txQty} ${mat.unit} vật tư ${mat.name}`,
+            module: 'WAREHOUSE'
+          });
+
+          setTimeout(() => {
+            this.triggerQuickModal = false;
+            this.successMessage = '';
+          }, 1500);
+        }
+      }
+    }
+
+    // Khởi tạo Lucide sau khi DOM đã được dựng hoàn chỉnh.
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

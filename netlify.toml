@@ -1,0 +1,9 @@
+[build]
+  command = "node scripts/generate-supabase-config.js"
+  publish = "dist"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "same-origin"
