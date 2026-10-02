@@ -1,5 +1,5 @@
 [build]
-  command = "node scripts/generate-supabase-config.js"
+  command = "node scripts/generate-supabase-config.js || true"
   publish = "dist"
 
 [[headers]]
